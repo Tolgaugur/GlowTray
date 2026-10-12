@@ -12,6 +12,8 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 - `THIRD_PARTY_LICENSES.md` with the licenses of everything bundled into the exe; releases include it next to the exe.
+- Releases include the SHA-256 hash of the exe (`Glowtray.exe.sha256` and in the release notes) with a command to
+  check it.
 
 ### Fixed
 - Sunrise/sunset rules with an offset that crosses midnight now fire at the right time, and the weekday filter

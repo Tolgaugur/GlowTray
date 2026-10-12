@@ -28,11 +28,30 @@ jobs:
       - name: Collect third-party licenses
         run: python tools/third_party_licenses.py
 
+      # Glowtray.exe.sha256 uses the `sha256sum` format; the release notes show the hash and how to check it
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/Glowtray.exe -Algorithm SHA256).Hash.ToLower()
+          [IO.File]::WriteAllText("dist/Glowtray.exe.sha256", "$hash  Glowtray.exe`n")
+          $notes = @'
+          **SHA-256** of `Glowtray.exe`: `HASH`
+
+          To check your download, run this in PowerShell in the folder where you saved it. It should print `True`:
+
+          ```powershell
+          (Get-FileHash .\Glowtray.exe -Algorithm SHA256).Hash -eq 'HASH'
+          ```
+          '@
+          [IO.File]::WriteAllText("dist/release-notes.md", $notes.Replace("HASH", $hash) + "`n")
+          Get-Content dist/Glowtray.exe.sha256
+
       - uses: actions/upload-artifact@v4
         with:
           name: Glowtray
           path: |
             dist/Glowtray.exe
+            dist/Glowtray.exe.sha256
             THIRD_PARTY_LICENSES.md
 
       - name: Publish release
@@ -41,5 +60,7 @@ jobs:
         with:
           files: |
             dist/Glowtray.exe
+            dist/Glowtray.exe.sha256
             THIRD_PARTY_LICENSES.md
+          body_path: dist/release-notes.md
           generate_release_notes: true

@@ -58,9 +58,11 @@ issues yet, a report (working or not) helps a lot.
 
 1. Download `Glowtray.exe` from the [latest release](../../releases/latest) and put it anywhere, for example
    `%LOCALAPPDATA%\Programs\Glowtray\`.
-2. Run it. Windows SmartScreen may warn you because the executable is not code-signed. Click
+2. Optionally, check that the download is intact: each release lists the SHA-256 hash of `Glowtray.exe` and a
+   PowerShell command that compares it with your file.
+3. Run it. Windows SmartScreen may warn you because the executable is not code-signed. Click
    *More info → Run anyway*. You can also [build it yourself](#building-the-exe) from source.
-3. A bulb icon appears in the system tray. Click it to open the panel.
+4. A bulb icon appears in the system tray. Click it to open the panel.
 
 ### Connecting your bulb
 
