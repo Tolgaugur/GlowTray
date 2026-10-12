@@ -1,0 +1,42 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the panel
+        2. ...
+  - type: input
+    id: version
+    attributes:
+      label: Glowtray version
+      description: Shown at the bottom of Settings
+      placeholder: v1.2.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+  - type: input
+    id: bulb
+    attributes:
+      label: Bulb model
+      placeholder: Hue White and Color Ambiance A60 (Bluetooth)
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Relevant lines from %APPDATA%\Glowtray\glowtray.log (Settings → Log folder)
+      render: text

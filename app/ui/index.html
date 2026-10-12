@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glowtray</title>
+<style>
+:root{
+  --bg:#1c1c1e; --card:rgba(255,255,255,.05); --card-b:rgba(255,255,255,.08); --card-h:rgba(255,255,255,.085);
+  --text:#f2f2f2; --muted:#9a9a9f; --faint:rgba(255,255,255,.35); --track:rgba(255,255,255,.12);
+  --seg:rgba(255,255,255,.12); --input:rgba(255,255,255,.06); --input-b:rgba(255,255,255,.1);
+  --accent:#ffb44c; --lc:#ffb44c; --on-accent:#1a1a1a; --danger:#ff6b6b; --ok:#3ddc84; color-scheme:dark;
+}
+body.light{
+  --bg:#f3f3f5; --card:#ffffff; --card-b:rgba(0,0,0,.07); --card-h:#fafafa;
+  --text:#1b1b1f; --muted:#6b6b72; --faint:rgba(0,0,0,.35); --track:rgba(0,0,0,.1);
+  --seg:#ffffff; --input:#f6f6f8; --input-b:rgba(0,0,0,.1); color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);overflow:hidden;
+  font:13px/1.4 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.panel{position:relative;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.panel.enter{animation:enter .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter{from{transform:translateY(14px);opacity:.0}to{transform:none;opacity:1}}
+.glow{position:absolute;left:-60px;right:-60px;top:-150px;height:300px;pointer-events:none;
+  background:radial-gradient(closest-side,var(--lc),transparent);opacity:.32;transition:opacity .6s,background .6s}
+body.off .glow{opacity:.06}
+body.light .glow{opacity:.22}
+
+/* header */
+header{position:relative;display:flex;align-items:center;gap:12px;padding:16px 16px 10px}
+.bulb{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--card);
+  border:1px solid var(--card-b);flex:none;transition:box-shadow .5s}
+body:not(.off) .bulb{box-shadow:0 0 24px -4px var(--lc)}
+.bulb svg{width:24px;height:24px}
+.htitle{flex:1;min-width:0}
+#devName{font-weight:650;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:#8a8a8f;flex:none}
+.dot.ok{background:var(--ok)} .dot.err{background:var(--danger)}
+.dot.busy{background:#f5c542;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.icon-btn{width:32px;height:32px;border-radius:9px;border:0;background:transparent;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{background:var(--card-h);color:var(--text)}
+.icon-btn.on{color:var(--accent)}
+.icon-btn svg{width:17px;height:17px}
+
+/* switch */
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex:none}
+.switch input{display:none}
+.switch span{position:absolute;inset:0;border-radius:99px;background:var(--track);border:1px solid var(--input-b);transition:.2s}
+.switch span:after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:.2s}
+.switch input:checked+span{background:var(--accent);border-color:transparent}
+.switch input:checked+span:after{left:21px;background:var(--on-accent);width:14px}
+.switch.big{width:52px;height:30px}
+.switch.big span:after{width:20px;height:20px;left:4px;top:4px}
+.switch.big input:checked+span{background:var(--lc)}
+.switch.big input:checked+span:after{left:26px;width:20px;background:var(--on-accent)}
+
+/* tabs */
+.tabs{position:relative;display:flex;margin:2px 16px 10px;padding:3px;border-radius:11px;background:var(--card);border:1px solid var(--card-b)}
+.tabs button{flex:1;position:relative;z-index:1;border:0;background:none;padding:6px 0;border-radius:8px;color:var(--muted);font-weight:600}
+.tabs button.active{color:var(--text)}
+.tabs .ind{position:absolute;top:3px;bottom:3px;border-radius:8px;background:var(--seg);transition:left .25s cubic-bezier(.2,.8,.2,1),width .25s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+main{position:relative;flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 16px}
+main::-webkit-scrollbar{width:6px} main::-webkit-scrollbar-thumb{background:var(--track);border-radius:3px}
+.tab{display:none} .tab.active{display:block;animation:fade .2s}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px}
+.row-head>span{font-weight:600}
+.row-head b{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:12px}
+.link{border:0;background:none;color:var(--accent);padding:0;font-weight:600;font-size:12px}
+.banner{margin:0 16px 10px;padding:10px 12px;border-radius:12px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);
+  display:flex;gap:10px;align-items:center;font-size:12px}
+.banner[hidden]{display:none}
+.banner div{flex:1}
+
+/* sliders */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:99px;
+  background:linear-gradient(90deg,var(--fill,var(--lc)) 0 var(--p,50%),var(--track) var(--p,50%) 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-6px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.05);transition:transform .15s}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
+input.ct::-webkit-slider-runnable-track{background:linear-gradient(90deg,#ff8d21,#ffb46b,#ffe4c4,#fff7ef,#e6eeff,#c9dbff)}
+input.hue::-webkit-slider-runnable-track{background:linear-gradient(90deg,red,#ff0,lime,cyan,blue,#f0f,red)}
+.bri-row{display:flex;align-items:center;gap:10px}
+.bri-row svg{width:16px;height:16px;color:var(--muted);flex:none}
+
+/* segment */
+.seg{display:flex;padding:3px;border-radius:10px;background:var(--input);border:1px solid var(--input-b);margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;padding:5px 0;border-radius:7px;color:var(--muted);font-weight:600;font-size:12px}
+.seg button.active{background:var(--seg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.seg button:disabled{opacity:.35;cursor:default}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--input-b);background:var(--input);padding:5px 10px;border-radius:99px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.chip:hover{background:var(--card-h)}
+.chip.active{background:var(--lc);color:var(--on-accent);border-color:transparent}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* color wheel */
+.wheel-wrap{position:relative;width:190px;height:190px;margin:2px auto 12px;touch-action:none}
+#wheel{width:190px;height:190px;border-radius:50%;cursor:crosshair;display:block;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.knob{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;
+  box-shadow:0 1px 6px rgba(0,0,0,.5);pointer-events:none}
+.swatches{display:flex;justify-content:space-between;gap:4px}
+.sw{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.sw:hover{transform:scale(1.12)}
+.sw.sel{border-color:var(--text)}
+
+/* scenes */
+.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.scene{position:relative;border:1px solid var(--input-b);background:var(--input);border-radius:12px;padding:10px 6px 8px;text-align:center;font-size:12px;font-weight:600}
+.scene:hover{background:var(--card-h)}
+.scene .sc{width:26px;height:26px;border-radius:50%;margin:0 auto 6px;box-shadow:0 0 12px -2px var(--c)}
+.scene small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+.scene .x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:0;background:var(--danger);color:#fff;font-size:12px;line-height:20px;padding:0;display:none}
+.scenes.editing .scene .x{display:block}
+.scenes.editing .scene{animation:wob .3s}
+@keyframes wob{50%{transform:scale(.96)}}
+.scene.add{border-style:dashed;color:var(--muted)}
+.scene input{width:100%;border:0;background:transparent;text-align:center;outline:none;font-weight:600}
+
+/* timer */
+.timer-big{font-size:34px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:1px;text-align:center;margin:4px 0 0}
+.timer-sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:10px}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--input-b);background:var(--input);padding:6px 12px;border-radius:9px;font-weight:600;font-size:12px}
+.btn:hover{background:var(--card-h)}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--danger)}
+.btn.wide{width:100%;padding:9px}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* form */
+.field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0}
+.field+.field{border-top:1px solid var(--card-b)}
+.field label{color:var(--text)}
+.field .hint{display:block;color:var(--muted);font-size:11px}
+input[type=text],input[type=number],input[type=time],select{background:var(--input);border:1px solid var(--input-b);border-radius:8px;padding:5px 8px;outline:none;min-width:0}
+input[type=text]:focus,input[type=number]:focus,input[type=time]:focus,select:focus{border-color:var(--accent)}
+select option{background:var(--bg);color:var(--text)}
+input[type=number]{width:72px}
+.w100{width:100%}
+.days{display:flex;gap:4px}
+.days button{width:30px;height:28px;border-radius:8px;border:1px solid var(--input-b);background:var(--input);font-size:11px;font-weight:600;color:var(--muted);padding:0}
+.days button.on{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.hk{width:150px;text-align:center;cursor:pointer;caret-color:transparent}
+.hk.capturing{border-color:var(--accent);color:var(--accent)}
+
+/* automation */
+.rule{display:flex;align-items:center;gap:10px;cursor:pointer}
+.rule .ri{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--input);flex:none;color:var(--accent)}
+.rule .ri svg{width:18px;height:18px}
+.rule .rt{flex:1;min-width:0}
+.rule .rt b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rule .rt span{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.rule.disabled .ri{color:var(--muted)}
+.sect{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin:14px 2px 6px}
+.cond{position:relative;padding-right:34px}
+.cond .rm{position:absolute;top:10px;right:8px}
+.stack>*+*{margin-top:8px}
+.edhead{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.edhead input{flex:1;font-weight:600;font-size:14px;padding:7px 10px}
+.act{display:flex;gap:8px;font-size:12px;padding:5px 0}
+.act+.act{border-top:1px solid var(--card-b)}
+.act time{color:var(--muted);font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);text-align:center;padding:8px 0;font-size:12px}
+.devrow{display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px}
+.devrow+.devrow{border-top:1px solid var(--card-b)}
+.spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--track);border-top-color:var(--accent);animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:absolute;left:50%;bottom:16px;transform:translate(-50%,20px);opacity:0;background:var(--text);color:var(--bg);
+  padding:7px 14px;border-radius:99px;font-size:12px;font-weight:600;transition:.25s;pointer-events:none;white-space:nowrap;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.disabled-box{opacity:.4;pointer-events:none}
+
+/* f.lux / screen */
+.mode-title{display:flex;align-items:center;gap:8px}
+.mode-title .mi{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--input);font-size:15px;flex:none}
+.kpill{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:700;color:#1a1a1a;margin-left:4px;vertical-align:1px}
+.subopts{margin-top:8px;padding-top:4px;border-top:1px solid var(--card-b)}
+.subopts .lbl{font-size:12px;color:var(--muted);padding-top:6px}
+
+/* stats */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.tile{background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:10px 10px 9px}
+.tile small{display:block;color:var(--muted);font-size:11px;font-weight:600}
+.tile b{display:block;font-size:17px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile span{display:block;color:var(--muted);font-size:11px;white-space:nowrap}
+.bars{display:flex;align-items:flex-end;gap:4px;height:110px;padding-top:6px}
+.bars .bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.bars .bar{width:100%;max-width:26px;border-radius:5px 5px 2px 2px;background:var(--lc);opacity:.85;min-height:2px;transition:height .4s}
+.bars .bar.zero{background:var(--track);opacity:1}
+.bars .bc.today .bar{opacity:1;box-shadow:0 0 10px -2px var(--lc)}
+.bars .bl{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.bars.dense{gap:2px}
+.heat{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+.heat i{height:22px;border-radius:3px;background:var(--lc)}
+.heat-l{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px}
+.toprow{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px}
+.toprow span{flex:none;width:96px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toprow .tb{flex:1;height:6px;border-radius:99px;background:var(--track);overflow:hidden}
+.toprow .tb i{display:block;height:100%;background:var(--lc);border-radius:99px}
+.toprow b{width:28px;text-align:right;color:var(--muted);font-weight:600}
+</style>
+</head>
+<body class="off">
+<div class="panel" id="panel">
+  <div class="glow"></div>
+  <header>
+    <div class="bulb"><svg viewBox="0 0 24 24"><path id="bulbPath" fill="var(--faint)" d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2z"/><path fill="var(--muted)" d="M9 19.5h6v1a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 20.5z"/></svg></div>
+    <div class="htitle">
+      <div id="devName">Glowtray</div>
+      <div class="status"><span class="dot" id="dot"></span><span id="statusText">Starting…</span></div>
+    </div>
+    <button class="icon-btn" id="pinBtn" title="Keep panel open"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 3a1 1 0 0 1 .7 1.7l-.7.7v4.2l2.7 2.7A1 1 0 0 1 18 14h-5v6l-1 2-1-2v-6H6a1 1 0 0 1-.7-1.7L8 9.6V5.4l-.7-.7A1 1 0 0 1 8 3z"/></svg></button>
+    <label class="switch big" title="On / Off"><input type="checkbox" id="power"><span></span></label>
+  </header>
+  <div class="banner" id="banner" hidden><div id="bannerText"></div><button class="btn" id="retryBtn">Retry</button></div>
+  <nav class="tabs" id="tabs">
+    <span class="ind"></span>
+    <button data-tab="light" class="active">Light</button>
+    <button data-tab="auto">Automation</button>
+    <button data-tab="stats">Stats</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  <main id="main">
+    <!-- LIGHT -->
+    <section class="tab active" id="tab-light">
+      <div class="card">
+        <div class="row-head"><span>Brightness</span><b id="briVal">–</b></div>
+        <div class="bri-row">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+          <input type="range" id="bri" min="1" max="100" value="50">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1.5v2M12 20.5v2M1.5 12h2M20.5 12h2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M4.6 19.4 6 18M18 6l1.4-1.4"/></g></svg>
+        </div>
+      </div>
+      <div class="card">
+        <div class="seg" id="modeSeg"><button data-mode="ct" class="active">White</button><button data-mode="xy">Color</button></div>
+        <div id="ctBox">
+          <div class="row-head"><span>Color temperature</span><b id="ctVal">–</b></div>
+          <input type="range" class="ct" id="ct" min="2200" max="6500" step="50" value="2700">
+          <div class="chips" id="ctChips" style="margin-top:8px"></div>
+        </div>
+        <div id="xyBox" hidden>
+          <div class="wheel-wrap" id="wheelWrap"><canvas id="wheel" width="380" height="380"></canvas><div class="knob" id="knob"></div></div>
+          <div class="swatches" id="swatches"></div>
+        </div>
+      </div>
+      <div class="card" id="fluxCard">
+        <div class="field" style="padding:0">
+          <div class="mode-title"><div class="mi">🌙</div><div><label>f.lux sync</label><span class="hint" id="fluxHint">–</span></div></div>
+          <label class="switch"><input type="checkbox" id="fluxOn"><span></span></label>
+        </div>
+        <div id="fluxOpts" class="subopts" hidden></div>
+      </div>
+      <div class="card">
+        <div class="row-head"><span>Scenes</span><button class="link" id="sceneEditBtn">Edit</button></div>
+        <div class="scenes" id="scenes"></div>
+      </div>
+      <div class="card" id="timerCard"></div>
+      <div class="card">
+        <div class="row-head"><span>Effects</span><button class="link" id="effStop" hidden>Stop</button></div>
+        <div class="chips" id="effects"></div>
+        <div id="screenOpts" class="subopts" hidden></div>
+      </div>
+    </section>
+
+    <!-- AUTOMATION -->
+    <section class="tab" id="tab-auto">
+      <div id="ruleList"></div>
+      <div id="ruleEditor" hidden></div>
+    </section>
+
+    <!-- STATS -->
+    <section class="tab" id="tab-stats"><div id="statsBox"><div class="empty">Loading…</div></div></section>
+
+    <!-- SETTINGS -->
+    <section class="tab" id="tab-settings">
+      <div class="sect" style="margin-top:0">Device</div>
+      <div class="card">
+        <div class="field"><div><label id="sDevName">–</label><span class="hint" id="sDevAddr">–</span></div>
+          <button class="btn" id="reconnectBtn">Reconnect</button></div>
+        <div class="field"><label>Display name</label><input type="text" id="sName" style="width:160px"></div>
+        <div class="field" style="display:block">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><label>Add / change bulb</label><span class="hint">The bulb must be paired with Windows</span></div>
+            <button class="btn" id="scanBtn">Search</button>
+          </div>
+          <div id="scanResults"></div>
+        </div>
+      </div>
+
+      <div class="sect">Connection</div>
+      <div class="card">
+        <div class="seg" id="connSeg" style="margin-bottom:6px"><button data-v="share">Share with phone</button><button data-v="keep">Always connected</button></div>
+        <div class="small muted" id="connHint"></div>
+        <div class="field" id="idleField"><div><label>Idle timeout</label><span class="hint">How long to wait before releasing the connection</span></div>
+          <div><input type="number" id="idleSec" min="3" max="600"> s</div></div>
+      </div>
+
+      <div class="sect">Hotkeys</div>
+      <div class="card" id="hotkeys"></div>
+
+      <div class="sect">Location (for sunrise / sunset)</div>
+      <div class="card">
+        <div class="field"><label>City</label><select id="city"></select></div>
+        <div class="field"><label>Latitude / Longitude</label><div><input type="number" step="0.0001" id="lat" style="width:84px"> <input type="number" step="0.0001" id="lon" style="width:84px"></div></div>
+        <div class="field"><label>Today</label><span class="muted" id="sunInfo">–</span></div>
+      </div>
+
+      <div class="sect">General</div>
+      <div class="card">
+        <div class="field"><div><label>Start with Windows</label><span class="hint">Starts quietly in the tray at login</span></div>
+          <label class="switch"><input type="checkbox" id="autostart"><span></span></label></div>
+        <div class="field"><label>Theme</label>
+          <select id="theme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></div>
+      </div>
+      <div class="btnrow" style="justify-content:space-between;margin-top:4px">
+        <button class="btn" id="logBtn">Log folder</button>
+        <span class="muted small" id="version"></span>
+        <button class="btn danger" id="quitBtn">Quit app</button>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+</div>
+<datalist id="procList"></datalist>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const el = (tag, props = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "style") e.style.cssText = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "html") e.innerHTML = v;
+    else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+};
+const api = () => window.pywebview.api;
+let S = {}, CFG = null, TIMER = null, SUN = {}, INFO = {}, ACTIVITY = [], FLUX = {}, STATS = null, statsRange = 7;
+let dragging = { bri: false, ct: false, wheel: false };
+let uiMode = "ct";
+
+/* ---------- color helpers ---------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function hexToRgb(h) { h = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); }
+function rgbToHex(r, g, b) { return "#" + [r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join(""); }
+function hsvToRgb(h, s, v) {
+  const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return [f(5) * 255, f(3) * 255, f(1) * 255];
+}
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx];
+}
+function kelvinToRgb(k) {
+  const t = k / 100;
+  const r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
+  const g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+  const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+  return rgbToHex(r, g, b);
+}
+function throttle(fn, ms) {
+  let last = 0, t = null, args;
+  return (...a) => {
+    args = a; const now = Date.now();
+    clearTimeout(t);
+    if (now - last >= ms) { last = now; fn(...args); }
+    else t = setTimeout(() => { last = Date.now(); fn(...args); }, ms - (now - last));
+  };
+}
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+const lightColor = st => st.mode === "xy" && st.rgb ? st.rgb : kelvinToRgb(st.ct || 2700);
+
+/* ---------- theme ---------- */
+function applyTheme() {
+  const t = CFG?.theme || "system";
+  const dark = t === "dark" || (t === "system" && (INFO.systemDark ?? matchMedia("(prefers-color-scheme: dark)").matches));
+  document.body.classList.toggle("light", !dark);
+}
+
+/* ---------- tabs ---------- */
+function setTab(name) {
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".tab").forEach(s => s.classList.toggle("active", s.id === "tab-" + name));
+  moveInd();
+  $("#main").scrollTop = 0;
+  if (name === "auto") closeEditor();
+  if (name === "stats") loadStats();
+}
+function moveInd() {
+  const b = $("#tabs button.active"), ind = $("#tabs .ind");
+  if (!b) return;
+  ind.style.left = b.offsetLeft + "px"; ind.style.width = b.offsetWidth + "px";
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+
+/* ---------- state ---------- */
+function renderState() {
+  const st = S;
+  const on = !!st.on;
+  document.body.classList.toggle("off", !on);
+  const col = lightColor(st);
+  document.documentElement.style.setProperty("--lc", on ? col : "#8a8a8f");
+  const acc = on ? col : "#ffb44c";
+  document.documentElement.style.setProperty("--accent", acc);
+  const [ar, ag, ab] = hexToRgb(acc);
+  document.documentElement.style.setProperty("--on-accent", (0.299 * ar + 0.587 * ag + 0.114 * ab) > 150 ? "#1a1a1a" : "#ffffff");
+  // keep text readable on light accent colors
+  $("#bulbPath").setAttribute("fill", on ? col : "var(--faint)");
+  $("#power").checked = on;
+
+  const dot = $("#dot"), txt = $("#statusText");
+  dot.className = "dot";
+  if (st.busy) { dot.classList.add("busy"); txt.textContent = "Connecting…"; }
+  else if (st.connected) { dot.classList.add("ok"); txt.textContent = on ? `On · ${st.bri ?? "–"}%` : "Off · connected"; }
+  else if (st.error) { dot.classList.add("err"); txt.textContent = "Not connected"; }
+  else if (st.on == null) { txt.textContent = "Waiting"; }
+  else { txt.textContent = (on ? `On · ${st.bri}%` : "Off") + " · idle"; }
+
+  $("#banner").hidden = !(st.error && !st.connected && !st.busy);
+  $("#bannerText").textContent = st.error || "";
+
+  if (!dragging.bri && st.bri != null) setRange($("#bri"), st.bri);
+  $("#briVal").textContent = st.bri != null ? `${Math.round(st.bri)}%` : "–";
+  if (!dragging.ct && st.ct) setRange($("#ct"), st.ct);
+  $("#ctVal").textContent = st.ct ? `${st.ct}K` : "–";
+  if (st.mode && !renderState.modeSet) { uiMode = st.mode; renderState.modeSet = true; }
+  $("#modeSeg [data-mode=xy]").disabled = st.has_color === false;
+  renderMode();
+  if (!dragging.wheel && st.rgb) placeKnob(st.rgb);
+  document.querySelectorAll(".sw").forEach(s => s.classList.toggle("sel", st.mode === "xy" && s.dataset.c === st.rgb));
+  document.querySelectorAll("#ctChips .chip").forEach(c => c.classList.toggle("active", st.mode === "ct" && +c.dataset.k === st.ct));
+  renderEffects();
+  if (CFG) renderFlux();
+}
+function setRange(r, v) {
+  r.value = v;
+  r.style.setProperty("--p", ((v - r.min) / (r.max - r.min) * 100) + "%");
+}
+function renderMode() {
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("active", b.dataset.mode === uiMode));
+  $("#ctBox").hidden = uiMode !== "ct";
+  $("#xyBox").hidden = uiMode !== "xy";
+  if (uiMode === "xy") drawWheel();
+}
+
+/* ---------- controls ---------- */
+$("#power").onchange = e => { S.on = e.target.checked; renderState(); api().power(e.target.checked); };
+$("#retryBtn").onclick = () => { api().reconnect(); };
+$("#pinBtn").onclick = () => { const p = !$("#pinBtn").classList.contains("on"); $("#pinBtn").classList.toggle("on", p); api().pin(p); toast(p ? "Panel stays open" : "Panel closes when you click outside"); };
+
+const sendBri = throttle(v => api().brightness(v), 70);
+const bri = $("#bri");
+bri.oninput = () => { dragging.bri = true; setRange(bri, bri.value); $("#briVal").textContent = `${bri.value}%`; S.bri = +bri.value; if (!S.on) { S.on = true; renderState(); } sendBri(+bri.value); };
+bri.onchange = () => { dragging.bri = false; sendBri(+bri.value); };
+// Don't change brightness if the cursor lands on the slider while the panel is being scrolled
+let lastScroll = 0;
+$("#main").addEventListener("scroll", () => { lastScroll = Date.now(); }, { passive: true });
+bri.addEventListener("wheel", e => { if (Date.now() - lastScroll < 600) return; e.preventDefault(); const v = clamp(+bri.value + (e.deltaY < 0 ? 5 : -5), 1, 100); setRange(bri, v); S.bri = v; renderState(); sendBri(v); }, { passive: false });
+
+const sendCt = throttle(v => api().temperature(v), 80);
+const ct = $("#ct");
+ct.oninput = () => { dragging.ct = true; setRange(ct, ct.value); $("#ctVal").textContent = `${ct.value}K`; S.ct = +ct.value; S.mode = "ct"; renderState(); sendCt(+ct.value); };
+ct.onchange = () => { dragging.ct = false; sendCt(+ct.value); };
+
+[[2200, "Candle"], [2700, "Warm"], [3500, "Soft"], [4000, "Neutral"], [5000, "Daylight"], [6500, "Cool"]].forEach(([k, n]) => {
+  $("#ctChips").append(el("button", { class: "chip", "data-k": k, onclick: () => { S.ct = k; S.mode = "ct"; S.on = true; renderState(); api().temperature(k); } },
+    el("i", { style: `background:${kelvinToRgb(k)}` }), n));
+});
+document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => {
+  if (b.disabled) return;
+  uiMode = b.dataset.mode; renderMode();
+});
+
+/* color wheel */
+const wheel = $("#wheel"), knob = $("#knob");
+let wheelDrawn = false;
+function drawWheel() {
+  if (wheelDrawn) return; wheelDrawn = true;
+  const ctx = wheel.getContext("2d"), W = wheel.width, R = W / 2;
+  const img = ctx.createImageData(W, W);
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+    const dx = x - R, dy = y - R, d = Math.hypot(dx, dy), i = (y * W + x) * 4;
+    if (d > R) { img.data[i + 3] = 0; continue; }
+    const h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    const [r, g, b] = hsvToRgb(h, Math.min(1, d / R), 1);
+    img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = d > R - 1 ? (R - d) * 255 : 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function placeKnob(hex) {
+  const [h, s] = rgbToHsv(...hexToRgb(hex)), R = 95;
+  const a = h * Math.PI / 180;
+  knob.style.left = (R + Math.cos(a) * s * R) + "px";
+  knob.style.top = (R + Math.sin(a) * s * R) + "px";
+  knob.style.background = hex;
+}
+const sendColor = throttle(c => api().color(c), 90);
+function wheelPick(e) {
+  const r = wheel.getBoundingClientRect(), R = r.width / 2;
+  let dx = e.clientX - r.left - R, dy = e.clientY - r.top - R;
+  const d = Math.min(Math.hypot(dx, dy), R);
+  const h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  const hex = rgbToHex(...hsvToRgb(h, d / R, 1));
+  placeKnob(hex);
+  S.rgb = hex; S.mode = "xy"; S.on = true; renderState();
+  sendColor(hex);
+}
+wheel.addEventListener("pointerdown", e => { dragging.wheel = true; wheel.setPointerCapture(e.pointerId); wheelPick(e); });
+wheel.addEventListener("pointermove", e => { if (dragging.wheel) wheelPick(e); });
+wheel.addEventListener("pointerup", () => { dragging.wheel = false; });
+const SWATCHES = ["#ff2d2d", "#ff7a1a", "#ffc21a", "#43d64a", "#16d6c2", "#1e7bff", "#5b4cff", "#b24cff", "#ff3d8b", "#ffffff"];
+SWATCHES.forEach(c => $("#swatches").append(el("div", { class: "sw", "data-c": c, style: `background:${c}`, title: c,
+  onclick: () => { S.rgb = c; S.mode = "xy"; S.on = true; renderState(); api().color(c); } })));
+
+/* ---------- f.lux ---------- */
+function renderFlux() {
+  const f = FLUX || {}, c = CFG.flux || {};
+  $("#fluxOn").checked = !!c.enabled;
+  const hint = $("#fluxHint"); hint.innerHTML = "";
+  if (!f.running) hint.append(f.running === false ? "f.lux is not running" : "Checking…");
+  else {
+    const k = f.kelvin;
+    hint.append("f.lux now", el("span", { class: "kpill", style: `background:${kelvinToRgb(k || 6500)}` }, `${k}K`));
+    if (c.enabled) {
+      if (f.paused) hint.append(" · paused ", el("button", { class: "link", onclick: () => { api().flux_resume(); FLUX.paused = false; renderFlux(); toast("f.lux sync resumed"); } }, "Resume"));
+      else if (!S.on) hint.append(" · light is off");
+      else hint.append(f.target_bri ? ` → light ${f.target_bri}%` : " → light follows");
+    }
+  }
+}
+function renderFluxOpts() {
+  const c = CFG.flux || {}, box = $("#fluxOpts");
+  box.hidden = !c.enabled;
+  if (!c.enabled) return;
+  box.innerHTML = "";
+  const save = patch => api().settings({ flux: patch }).then(r => { CFG = r.config; renderFlux(); });
+  const range = (key, label) => {
+    const out = el("b", { class: "muted", style: "min-width:40px;text-align:right" }, `${c[key]}%`);
+    const r = el("input", { type: "range", min: 1, max: 100, value: c[key] });
+    setRange(r, c[key]);
+    r.oninput = () => { out.textContent = `${r.value}%`; setRange(r, r.value); };
+    r.onchange = () => save({ [key]: +r.value });
+    return [el("div", { class: "lbl" }, label), el("div", { style: "display:flex;gap:10px;align-items:center" }, r, out)];
+  };
+  box.append(field("Dim brightness too", el("label", { class: "switch" }, el("input", { type: "checkbox", checked: c.dim !== false,
+    onchange: e => save({ dim: e.target.checked }).then(renderFluxOpts) }), el("span")), "The light dims as f.lux gets warmer"));
+  if (c.dim !== false) box.append(...range("max_bri", "Daytime (6500K) brightness"), ...range("min_bri", "Brightness at the warmest tone (1900K)"));
+  box.append(el("div", { class: "small muted", style: "padding-top:6px" }, "Changing the light by hand pauses sync; it resumes on its own when f.lux next changes, when you turn the light off and on, or with “Resume”."));
+}
+$("#fluxOn").onchange = async e => {
+  const r = await api().settings({ flux: { enabled: e.target.checked } });
+  CFG = r.config; FLUX.paused = false; renderFlux(); renderFluxOpts();
+  toast(e.target.checked ? "The light will follow f.lux" : "f.lux sync turned off");
+};
+
+/* ---------- stats ---------- */
+async function loadStats() { STATS = await api().stats(); renderStats(); }
+function dur(sec) {
+  const m = Math.round((sec || 0) / 60), h = Math.floor(m / 60);
+  return h ? `${h} h ${m % 60} min` : `${m} min`;
+}
+function kwh(wh) { return wh >= 1000 ? (wh / 1000).toFixed(2) + " kWh" : Math.round(wh) + " Wh"; }
+function renderStats() {
+  const d = STATS, box = $("#statsBox"); if (!d) return;
+  box.innerHTML = "";
+  const cost = d.price ? ` · ≈ ${(d.month.wh / 1000 * d.price).toFixed(2)}` : "";
+  box.append(el("div", { class: "tiles" },
+    el("div", { class: "tile" }, el("small", {}, "Today"), el("b", {}, dur(d.today.on)), el("span", {}, d.today.avg_bri ? `avg. ${d.today.avg_bri}%` : "—")),
+    el("div", { class: "tile" }, el("small", {}, "Last 7 days"), el("b", {}, dur(d.week.on)), el("span", {}, `turned on ${d.week.ons}×`)),
+    el("div", { class: "tile" }, el("small", {}, "30-day energy"), el("b", {}, kwh(d.month.wh)), el("span", {}, cost ? "cost " + cost.slice(3) : `${d.watts} W bulb`))));
+
+  // daily chart
+  const ser = statsRange === 7 ? d.series7 : d.series30;
+  const max = Math.max(...ser.map(x => x.on), 1);
+  const seg = el("div", { class: "seg", style: "margin:0;width:120px" },
+    [[7, "7 days"], [30, "30 days"]].map(([n, l]) => el("button", { class: statsRange === n ? "active" : "", onclick: () => { statsRange = n; renderStats(); } }, l)));
+  const bars = el("div", { class: "bars" + (statsRange === 30 ? " dense" : "") });
+  ser.forEach((x, i) => bars.append(el("div", { class: "bc" + (i === ser.length - 1 ? " today" : ""), title: `${x.date}: ${dur(x.on)}` },
+    el("div", { class: "bar" + (x.on ? "" : " zero"), style: `height:${Math.max(2, x.on / max * 88)}px` }),
+    el("div", { class: "bl" }, statsRange === 30 ? (i % 5 === 4 || i === ser.length - 1 ? x.label : "\u00a0") : x.label))));
+  box.append(el("div", { class: "card" }, el("div", { class: "row-head" }, el("span", {}, "Time on"), seg), bars));
+
+  // hour-of-day distribution
+  const hours = d.month.hours, hmax = Math.max(...hours, 1);
+  const heat = el("div", { class: "heat" });
+  hours.forEach((v, h) => heat.append(el("i", { title: `${String(h).padStart(2, "0")}:00 · ${dur(v)}`, style: `opacity:${v ? 0.15 + 0.85 * v / hmax : 0.06}` })));
+  const peak = hours.indexOf(Math.max(...hours));
+  box.append(el("div", { class: "card" },
+    el("div", { class: "row-head" }, el("span", {}, "Hours of the day"), el("b", {}, d.month.on ? `peak ${String(peak).padStart(2, "0")}:00` : "")),
+    heat, el("div", { class: "heat-l" }, ...["00", "06", "12", "18", "24"].map(t => el("span", {}, t)))));
+
+  // summary
+  box.append(el("div", { class: "card" },
+    field("Average brightness", el("b", {}, d.month.avg_bri ? `${d.month.avg_bri}%` : "—"), "Last 30 days, while on"),
+    field("Daily average", el("b", {}, dur(d.daily_avg)), "On days the light was used"),
+    field("Times turned on", el("b", {}, String(d.month.ons)), "Last 30 days")));
+
+  // most used
+  const top = (title, rows) => {
+    const c = el("div", { class: "card" }, el("div", { class: "row-head" }, el("span", {}, title)));
+    if (!rows.length) { c.append(el("div", { class: "empty" }, "Not used yet")); return c; }
+    const m = rows[0][1];
+    rows.forEach(([n, v]) => c.append(el("div", { class: "toprow" }, el("span", {}, n), el("div", { class: "tb" }, el("i", { style: `width:${v / m * 100}%` })), el("b", {}, String(v)))));
+    return c;
+  };
+  const effName = k => (EFFECTS.find(e => e[0] === k)?.[1] || k).replace(/^\S+\s/, "");
+  box.append(top("Most used scenes", d.top_scenes), top("Most used effects", d.top_effects.map(([k, v]) => [effName(k), v])));
+
+  // settings
+  const st = CFG.stats || {};
+  const save = patch => api().settings({ stats: patch }).then(r => { CFG = r.config; loadStats(); toast("Saved"); });
+  const reset = el("button", { class: "btn danger", onclick: async e => {
+    if (e.target.dataset.sure) { STATS = await api().stats_reset(); renderStats(); toast("Stats reset"); }
+    else { e.target.dataset.sure = 1; e.target.textContent = "Are you sure?"; }
+  } }, "Reset");
+  box.append(el("div", { class: "sect" }, "Calculation"), el("div", { class: "card" },
+    field("Bulb wattage", el("div", {}, el("input", { type: "number", min: 1, max: 30, step: 0.5, value: st.watts ?? 9, onchange: e => save({ watts: clamp(+e.target.value || 9, 1, 30) }) }), " W"), "At full brightness; printed on the box"),
+    field("Electricity price", el("div", {}, el("input", { type: "number", min: 0, step: 0.01, value: st.price || "", placeholder: "—", onchange: e => save({ price: Math.max(0, +e.target.value || 0) }) }), " /kWh"), "For a cost estimate (optional), in your currency"),
+    field("Tracking since", el("span", { class: "muted" }, d.since ? new Date(d.since).toLocaleDateString() : "—"), "Measured while the PC is on"),
+    el("div", { class: "btnrow", style: "justify-content:flex-end;padding-top:6px" }, reset)));
+}
+
+/* ---------- scenes ---------- */
+let sceneEditing = false;
+function sceneColor(s) { return s.mode === "xy" ? s.color : kelvinToRgb(s.ct || 2700); }
+function renderScenes() {
+  const box = $("#scenes"); box.innerHTML = "";
+  box.classList.toggle("editing", sceneEditing);
+  for (const s of CFG.scenes) {
+    const c = sceneColor(s);
+    box.append(el("div", { class: "scene", style: `--c:${c}`, onclick: () => { if (!sceneEditing) { api().scene_apply(s.id); toast(`“${s.name}” applied`); } } },
+      el("div", { class: "sc", style: `background:${c}` }), s.name, el("small", {}, `${s.bri}%`),
+      el("button", { class: "x", title: "Delete", onclick: async e => { e.stopPropagation(); CFG.scenes = await api().scene_delete(s.id); renderScenes(); } }, "×")));
+  }
+  const add = el("div", { class: "scene add", onclick: () => {
+    if (add.querySelector("input")) return;
+    add.innerHTML = "";
+    const inp = el("input", { placeholder: "Name…", maxlength: 24 });
+    add.append(el("div", { class: "sc", style: `background:${lightColor(S)}` }), inp);
+    inp.focus();
+    inp.onkeydown = async e => {
+      if (e.key === "Enter" && inp.value.trim()) { CFG.scenes = await api().scene_save(inp.value.trim()); renderScenes(); toast("Scene saved"); }
+      if (e.key === "Escape") { e.stopPropagation(); renderScenes(); }
+    };
+    inp.onblur = () => setTimeout(() => { if (document.activeElement !== inp) renderScenes(); }, 150);
+  } }, el("div", { class: "sc", style: "background:transparent;border:2px dashed var(--faint);box-shadow:none" }), "Current", el("small", {}, "+ Save"));
+  box.append(add);
+}
+$("#sceneEditBtn").onclick = () => { sceneEditing = !sceneEditing; $("#sceneEditBtn").textContent = sceneEditing ? "Done" : "Edit"; renderScenes(); };
+
+/* ---------- timer ---------- */
+const TIMER_ACTIONS = { off: "Turn off", sleep: "Dim slowly and turn off", on: "Turn on", toggle: "Toggle" };
+let timerMinutes = 30, timerAction = "off", timerTick = null;
+function fmtLeft(ms) {
+  const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(ss).padStart(2, "0");
+}
+function renderTimer() {
+  const c = $("#timerCard"); c.innerHTML = "";
+  clearInterval(timerTick);
+  if (TIMER) {
+    const big = el("div", { class: "timer-big" }, fmtLeft(TIMER.end - Date.now()));
+    const label = TIMER.action.label || TIMER_ACTIONS[TIMER.action.type] || TIMER.action.type;
+    c.append(el("div", { class: "row-head" }, el("span", {}, "Timer"), el("b", {}, "running")), big,
+      el("div", { class: "timer-sub" }, `then: ${label}`),
+      el("div", { class: "btnrow", style: "justify-content:center" },
+        el("button", { class: "btn", onclick: () => { api().timer_start((TIMER.end - Date.now()) / 60000 + 15, TIMER.action); } }, "+15 min"),
+        el("button", { class: "btn danger", onclick: () => { api().timer_cancel(); if (TIMER.action.label) api().effect_stop(); } }, "Cancel")));
+    timerTick = setInterval(() => { big.textContent = fmtLeft(TIMER.end - Date.now()); }, 1000);
+    return;
+  }
+  const presets = [[15, "15 min"], [30, "30 min"], [60, "1 h"], [120, "2 h"]];
+  const row = el("div", { class: "btnrow", style: "margin-bottom:10px" });
+  const custom = el("input", { type: "number", min: 1, max: 1440, value: timerMinutes, style: "width:64px" });
+  presets.forEach(([m, l]) => row.append(el("button", { class: "chip" + (m === timerMinutes ? " active" : ""), onclick: () => { timerMinutes = m; custom.value = m; renderTimerPresets(); } }, l)));
+  function renderTimerPresets() { row.querySelectorAll(".chip").forEach((b, i) => b.classList.toggle("active", presets[i][0] === timerMinutes)); }
+  custom.oninput = () => { timerMinutes = +custom.value || 1; renderTimerPresets(); };
+  const sel = el("select", { onchange: e => timerAction = e.target.value }, Object.entries(TIMER_ACTIONS).map(([v, l]) => el("option", { value: v, selected: v === timerAction }, l)));
+  sel.style.cssText = "flex:1;min-width:0";
+  c.append(el("div", { class: "row-head" }, el("span", {}, "Timer"), el("b", {}, "")), row,
+    el("div", { class: "btnrow", style: "flex-wrap:nowrap" }, custom, el("span", { class: "muted small", style: "white-space:nowrap" }, "min, then"), sel),
+    el("button", { class: "btn primary wide", style: "margin-top:8px", onclick: startTimer }, "Start timer"));
+}
+async function startTimer() {
+  const m = Math.max(1, timerMinutes);
+  if (timerAction === "sleep") {
+    api().preview_action({ type: "fade", to: 1, minutes: m });
+    await api().timer_start(m, { type: "off", label: "Dim slowly and turn off" });
+  } else await api().timer_start(m, { type: timerAction });
+  toast(`In ${m} min: ${TIMER_ACTIONS[timerAction]}`);
+}
+
+/* ---------- effects ---------- */
+const EFFECTS = [["candle", "🕯️ Candle"], ["fire", "🔥 Fireplace"], ["breathe", "🌙 Breathe"], ["colorloop", "🌈 Color loop"], ["party", "🎉 Party"], ["screen", "🖥️ Match screen"]];
+function renderEffects() {
+  const box = $("#effects");
+  if (!box.children.length) EFFECTS.forEach(([k, n]) => box.append(el("button", { class: "chip", "data-e": k,
+    onclick: () => { if (S.effect === k) { api().effect_stop(); S.effect = null; } else { api().effect(k); S.effect = k; } renderEffects(); } }, n)));
+  box.querySelectorAll(".chip").forEach(b => {
+    const needColor = ["colorloop", "party", "fire", "screen"].includes(b.dataset.e);
+    b.classList.toggle("active", S.effect === b.dataset.e);
+    b.disabled = needColor && S.has_color === false;
+  });
+  $("#effStop").hidden = !S.effect && !S.fading;
+  $("#effStop").textContent = S.fading && !S.effect ? "Stop fade" : "Stop";
+  const so = $("#screenOpts"), show = S.effect === "screen";
+  if (so.hidden === show) { so.hidden = !show; if (show) renderScreenOpts(); }
+}
+let MONITORS = null;
+async function renderScreenOpts() {
+  const box = $("#screenOpts"), sc = CFG.screen || {};
+  if (!MONITORS) MONITORS = await api().monitors();
+  box.innerHTML = "";
+  const save = patch => api().settings({ screen: patch }).then(r => { CFG = r.config; });
+  const mons = Object.fromEntries(MONITORS.map(m => [m.id, m.label]));
+  box.append(
+    field("Display", selectOf(mons, sc.monitor || MONITORS[0]?.id, v => save({ monitor: v }))),
+    field("Follow screen brightness", el("label", { class: "switch" }, el("input", { type: "checkbox", checked: sc.follow_bri !== false,
+      onchange: e => save({ follow_bri: e.target.checked }) }), el("span")), "The light dims in dark scenes"),
+    el("div", { class: "small muted", style: "padding-top:4px" }, "Updates a few times per second due to Bluetooth limits. DRM-protected video (e.g. the Netflix app) may not be capturable."));
+}
+$("#effStop").onclick = () => { api().effect_stop(); };
+
+/* ---------- automation ---------- */
+const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const TRIGGERS = {
+  time: "At a specific time", sun: "At sunrise / sunset", lock: "When the PC is locked", unlock: "When the PC is unlocked",
+  idle: "When the PC goes idle", active: "When I'm back at the PC", startup: "When the PC / app starts",
+  sleep: "When the PC goes to sleep", resume: "When the PC wakes from sleep", shutdown: "When the PC shuts down",
+  process_start: "When a program starts", process_stop: "When a program exits",
+};
+const CONDS = {
+  time_between: "Time is between", days: "On certain days", dark: "It's dark / light outside", light: "The light is on / off",
+  process: "A program is / isn't running", locked: "The PC is / isn't locked", idle: "The PC has been idle for a while",
+};
+const ACTIONS = {
+  on: "Turn light on", off: "Turn light off", toggle: "Toggle", scene: "Apply scene", brightness: "Set brightness",
+  temperature: "Set white tone", color: "Set color", fade: "Slow fade (sunrise, dimming)", effect: "Start effect",
+  stop_effect: "Stop effect / fade", blink: "Blink (alert)", notify: "Show Windows notification",
+  flux: "Turn f.lux sync on / off",
+};
+const TRIG_DEFAULTS = {
+  time: { time: "07:30", days: [0, 1, 2, 3, 4, 5, 6] }, sun: { event: "sunset", offset: 0, days: [0, 1, 2, 3, 4, 5, 6] },
+  idle: { minutes: 10 }, active: { minutes: 10 }, process_start: { name: "" }, process_stop: { name: "" },
+};
+const COND_DEFAULTS = {
+  time_between: { from: "18:00", to: "23:59" }, days: { days: [0, 1, 2, 3, 4] }, dark: { value: true }, light: { value: "on" },
+  process: { name: "", running: true }, locked: { value: false }, idle: { minutes: 5 },
+};
+const ACT_DEFAULTS = {
+  scene: () => ({ scene: CFG.scenes[0]?.id }), brightness: () => ({ pct: 50 }), temperature: () => ({ kelvin: 2700 }),
+  color: () => ({ color: "#ff7a2f" }), fade: () => ({ to: 100, minutes: 15, from_low: true, kelvin: 4000 }),
+  effect: () => ({ effect: "candle" }), blink: () => ({ times: 3 }), notify: () => ({ text: "Glowtray automation ran" }),
+  flux: () => ({ on: true }),
+};
+
+function daysText(d) {
+  d = [...(d || [])].sort();
+  if (d.length === 7) return "Every day";
+  if (d.join() === "0,1,2,3,4") return "Weekdays";
+  if (d.join() === "5,6") return "Weekends";
+  if (!d.length) return "Never";
+  return d.map(i => DAYS[i]).join(", ");
+}
+function trigText(t) {
+  switch (t.type) {
+    case "time": return `${daysText(t.days)} · ${t.time}`;
+    case "sun": {
+      const ev = t.event === "sunrise" ? "sunrise" : "sunset";
+      const txt = !+t.offset ? `at ${ev}` : `${Math.abs(t.offset)} min ${t.offset > 0 ? "after" : "before"} ${ev}`;
+      return `${daysText(t.days)} · ${txt}`;
+    }
+    case "idle": return `PC idle for ${t.minutes} min`;
+    case "active": return `Back at PC after ${t.minutes}+ min`;
+    case "process_start": return `${t.name || "?"} starts`;
+    case "process_stop": return `${t.name || "?"} exits`;
+    default: return TRIGGERS[t.type] || t.type;
+  }
+}
+function actText(a) {
+  switch (a.type) {
+    case "scene": return "Scene: " + (CFG.scenes.find(s => s.id === a.scene)?.name || "?");
+    case "brightness": return `Brightness ${a.pct}%`;
+    case "temperature": return `White ${a.kelvin}K`;
+    case "color": return "Color";
+    case "fade": return `Fade to ${a.to}% over ${a.minutes} min`;
+    case "effect": return "Effect: " + (EFFECTS.find(e => e[0] === a.effect)?.[1] || a.effect);
+    case "blink": return `Blink ${a.times}×`;
+    case "flux": return "f.lux sync " + (a.on ? "on" : "off");
+    default: return ACTIONS[a.type] || a.type;
+  }
+}
+const ICONS = {
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 4v3M4.9 8.9l1.4 1.4M19.1 8.9l-1.4 1.4"/></svg>',
+  pc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+  app: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+};
+const trigIcon = t => t === "time" ? ICONS.clock : t === "sun" ? ICONS.sun : t.startsWith("process") ? ICONS.app : ICONS.pc;
+
+function renderRules() {
+  const box = $("#ruleList"); box.innerHTML = "";
+  if (!CFG.rules.length) box.append(el("div", { class: "card empty" }, "No automations yet."));
+  for (const r of CFG.rules) {
+    const sw = el("label", { class: "switch", onclick: e => e.stopPropagation() },
+      el("input", { type: "checkbox", checked: r.enabled, onchange: async e => { CFG.rules = await api().rule_enable(r.id, e.target.checked); renderRules(); } }), el("span"));
+    const conds = (r.conditions || []).length;
+    box.append(el("div", { class: "card rule" + (r.enabled ? "" : " disabled"), onclick: () => openEditor(r) },
+      el("div", { class: "ri", html: trigIcon(r.trigger.type) }),
+      el("div", { class: "rt" }, el("b", {}, r.name || "Untitled"),
+        el("span", {}, trigText(r.trigger) + (conds ? ` · ${conds} condition${conds > 1 ? "s" : ""}` : "")),
+        el("span", {}, "→ " + actText(r.action))),
+      sw));
+  }
+  box.append(el("button", { class: "btn primary wide", onclick: () => openEditor(null), style: "margin-bottom:14px" }, "+ New automation"));
+  box.append(el("div", { class: "sect" }, "Recent activity"));
+  const act = el("div", { class: "card", id: "activity" });
+  box.append(act);
+  renderActivity();
+}
+function renderActivity() {
+  const box = $("#activity"); if (!box) return;
+  box.innerHTML = "";
+  if (!ACTIVITY.length) { box.append(el("div", { class: "empty" }, "Nothing has run in this session yet.")); return; }
+  ACTIVITY.slice(0, 12).forEach(a => box.append(el("div", { class: "act" }, el("time", {}, a.time), el("span", {}, el("b", {}, a.source), " → " + a.text))));
+}
+
+/* --- editor components --- */
+function field(label, control, hint) {
+  return el("div", { class: "field" }, el("div", {}, el("label", {}, label), hint ? el("span", { class: "hint" }, hint) : null), control);
+}
+function daysPicker(obj, key = "days") {
+  const box = el("div", { class: "days" });
+  DAYS.forEach((d, i) => {
+    const b = el("button", { class: (obj[key] || []).includes(i) ? "on" : "", onclick: () => {
+      const s = new Set(obj[key] || []); s.has(i) ? s.delete(i) : s.add(i); obj[key] = [...s].sort(); b.classList.toggle("on");
+    } }, d);
+    box.append(b);
+  });
+  return el("div", { style: "padding:7px 0" }, box);
+}
+function selectOf(options, value, onchange, cls = "") {
+  return el("select", { class: cls, onchange: e => onchange(e.target.value) },
+    Object.entries(options).map(([v, l]) => el("option", { value: v, selected: String(v) === String(value) }, l)));
+}
+function num(obj, key, min, max, step = 1, width) {
+  return el("input", { type: "number", min, max, step, value: obj[key], style: width ? `width:${width}px` : null,
+    oninput: e => obj[key] = e.target.value === "" ? "" : +e.target.value });
+}
+function timeIn(obj, key) { return el("input", { type: "time", value: obj[key], oninput: e => obj[key] = e.target.value }); }
+function procIn(obj, key) {
+  return el("input", { type: "text", list: "procList", placeholder: "e.g. chrome.exe", value: obj[key] || "", style: "width:160px",
+    onfocus: loadProcs, oninput: e => obj[key] = e.target.value.trim() });
+}
+async function loadProcs() {
+  if (loadProcs.done) return; loadProcs.done = true;
+  const list = await api().processes();
+  $("#procList").innerHTML = ""; list.forEach(p => $("#procList").append(el("option", { value: p })));
+}
+function colorPicker(obj, key) {
+  const [h0, s0] = rgbToHsv(...hexToRgb(obj[key] || "#ff7a2f"));
+  const prev = el("div", { style: `width:28px;height:28px;border-radius:50%;flex:none;background:${obj[key]}` });
+  const hue = el("input", { type: "range", class: "hue", min: 0, max: 359, value: Math.round(h0) });
+  const sat = el("input", { type: "range", min: 0, max: 100, value: Math.round(s0 * 100) });
+  const upd = () => { obj[key] = rgbToHex(...hsvToRgb(+hue.value, +sat.value / 100, 1)); prev.style.background = obj[key];
+    sat.style.setProperty("--fill", obj[key]); setRange(sat, sat.value); };
+  hue.oninput = sat.oninput = upd; upd();
+  const sw = el("div", { class: "swatches", style: "margin-top:6px" }, SWATCHES.map(c => el("div", { class: "sw", style: `background:${c}`, onclick: () => {
+    const [h, s] = rgbToHsv(...hexToRgb(c)); hue.value = Math.round(h); sat.value = Math.round(s * 100); upd(); } })));
+  return el("div", { style: "padding:6px 0" }, el("div", { style: "display:flex;gap:10px;align-items:center" }, prev,
+    el("div", { style: "flex:1" }, hue, sat)), sw);
+}
+function rangeIn(obj, key, min, max, step, fmt) {
+  const out = el("b", { class: "muted", style: "min-width:48px;text-align:right" });
+  const r = el("input", { type: "range", min, max, step, value: obj[key] });
+  const upd = () => { obj[key] = +r.value; out.textContent = fmt(r.value); setRange(r, r.value); };
+  r.oninput = upd; upd();
+  return el("div", { style: "display:flex;gap:10px;align-items:center;padding:4px 0" }, r, out);
+}
+
+function trigFields(t) {
+  switch (t.type) {
+    case "time": return [field("Time", timeIn(t, "time")), daysPicker(t)];
+    case "sun": return [
+      field("Event", selectOf({ sunrise: "Sunrise", sunset: "Sunset" }, t.event, v => { t.event = v; })),
+      field("Offset", el("div", {}, num(t, "offset", -240, 240, 5), " min"), "Negative: before, positive: after"),
+      daysPicker(t),
+      el("div", { class: "small muted" }, `Today: sunrise ${SUN.sunrise || "?"}, sunset ${SUN.sunset || "?"}`)];
+    case "idle": return [field("Duration", el("div", {}, num(t, "minutes", 1, 600), " min"), "No mouse/keyboard input")];
+    case "active": return [field("After being idle for at least", el("div", {}, num(t, "minutes", 1, 600), " min"))];
+    case "process_start": case "process_stop": return [field("Program", procIn(t, "name"))];
+    default: return [];
+  }
+}
+function condFields(c) {
+  switch (c.type) {
+    case "time_between": return [field("From", timeIn(c, "from")), field("To", timeIn(c, "to"))];
+    case "days": return [daysPicker(c)];
+    case "dark": return [field("State", selectOf({ true: "It's dark", false: "It's light" }, c.value, v => c.value = v === "true"))];
+    case "light": return [field("State", selectOf({ on: "Light is on", off: "Light is off" }, c.value, v => c.value = v))];
+    case "process": return [field("Program", procIn(c, "name")), field("State", selectOf({ true: "Is running", false: "Isn't running" }, c.running, v => c.running = v === "true"))];
+    case "locked": return [field("State", selectOf({ true: "Locked", false: "Not locked" }, c.value, v => c.value = v === "true"))];
+    case "idle": return [field("At least", el("div", {}, num(c, "minutes", 1, 600), " min idle"))];
+    default: return [];
+  }
+}
+function actFields(a) {
+  switch (a.type) {
+    case "scene": return [field("Scene", selectOf(Object.fromEntries(CFG.scenes.map(s => [s.id, s.name])), a.scene, v => a.scene = v))];
+    case "brightness": return [rangeIn(a, "pct", 1, 100, 1, v => `${v}%`)];
+    case "temperature": return [rangeIn(a, "kelvin", 2200, 6500, 50, v => `${v}K`)];
+    case "color": return [colorPicker(a, "color")];
+    case "fade": {
+      const modeSel = selectOf({ keep: "Keep current color", ct: "White tone", xy: "Color" }, a.color ? "xy" : a.kelvin ? "ct" : "keep", v => {
+        if (v === "keep") { delete a.kelvin; delete a.color; } else if (v === "ct") { a.kelvin = a.kelvin || 4000; delete a.color; } else { a.color = a.color || "#ff7a2f"; delete a.kelvin; }
+        rebuildAction();
+      });
+      const parts = [
+        el("div", { class: "small muted", style: "padding-top:4px" }, "Target brightness"), rangeIn(a, "to", 0, 100, 1, v => +v === 0 ? "Off" : `${v}%`),
+        field("Duration", el("div", {}, num(a, "minutes", 0.5, 240, 0.5), " min")),
+        field("Start from lowest", el("label", { class: "switch" }, el("input", { type: "checkbox", checked: a.from_low, onchange: e => a.from_low = e.target.checked }), el("span")), "Turn on for a sunrise effect"),
+        field("Color", modeSel)];
+      if (a.kelvin) parts.push(rangeIn(a, "kelvin", 2200, 6500, 50, v => `${v}K`));
+      if (a.color) parts.push(colorPicker(a, "color"));
+      return parts;
+    }
+    case "effect": return [field("Effect", selectOf(Object.fromEntries(EFFECTS), a.effect, v => a.effect = v))];
+    case "blink": return [field("Times", num(a, "times", 1, 20))];
+    case "flux": return [field("State", selectOf({ true: "On (light follows f.lux)", false: "Off" }, a.on, v => a.on = v === "true"))];
+    case "notify": return [el("input", { type: "text", class: "w100", value: a.text || "", oninput: e => a.text = e.target.value, style: "margin:6px 0" })];
+    default: return [];
+  }
+}
+
+let ED = null, rebuildAction = () => {};
+function openEditor(rule) {
+  ED = rule ? JSON.parse(JSON.stringify(rule)) : { id: "", name: "", enabled: true, trigger: { type: "time", ...TRIG_DEFAULTS.time, days: [0, 1, 2, 3, 4, 5, 6] }, conditions: [], action: { type: "on" } };
+  $("#ruleList").hidden = true;
+  const box = $("#ruleEditor"); box.hidden = false; box.innerHTML = "";
+  $("#main").scrollTop = 0;
+
+  const name = el("input", { type: "text", placeholder: "Automation name", value: ED.name, oninput: e => ED.name = e.target.value });
+  box.append(el("div", { class: "edhead" },
+    el("button", { class: "icon-btn", title: "Back", onclick: closeEditor, html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>' }),
+    name));
+
+  // trigger
+  box.append(el("div", { class: "sect" }, "When"));
+  const tCard = el("div", { class: "card" });
+  const rebuildTrig = () => {
+    tCard.innerHTML = "";
+    tCard.append(selectOf(TRIGGERS, ED.trigger.type, v => { ED.trigger = { type: v, ...JSON.parse(JSON.stringify(TRIG_DEFAULTS[v] || {})) }; rebuildTrig(); }, "w100"));
+    trigFields(ED.trigger).forEach(f => tCard.append(f));
+  };
+  rebuildTrig(); box.append(tCard);
+
+  // conditions
+  box.append(el("div", { class: "sect" }, "Conditions ", el("span", { style: "text-transform:none;letter-spacing:0;font-weight:500" }, "· optional, all must hold")));
+  const cBox = el("div", { class: "stack" });
+  const rebuildConds = () => {
+    cBox.innerHTML = "";
+    ED.conditions.forEach((c, i) => {
+      const card = el("div", { class: "card cond", style: "margin:0" });
+      card.append(selectOf(CONDS, c.type, v => { ED.conditions[i] = { type: v, ...JSON.parse(JSON.stringify(COND_DEFAULTS[v] || {})) }; rebuildConds(); }, "w100"),
+        el("button", { class: "icon-btn rm", title: "Remove", onclick: () => { ED.conditions.splice(i, 1); rebuildConds(); }, html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>' }));
+      condFields(c).forEach(f => card.append(f));
+      cBox.append(card);
+    });
+    cBox.append(el("button", { class: "btn wide", onclick: () => { ED.conditions.push({ type: "time_between", ...COND_DEFAULTS.time_between }); rebuildConds(); } }, "+ Add condition"));
+  };
+  rebuildConds(); box.append(cBox);
+
+  // action
+  box.append(el("div", { class: "sect" }, "Do this"));
+  const aCard = el("div", { class: "card" });
+  rebuildAction = () => {
+    aCard.innerHTML = "";
+    aCard.append(selectOf(ACTIONS, ED.action.type, v => { ED.action = { type: v, ...(ACT_DEFAULTS[v] ? ACT_DEFAULTS[v]() : {}) }; rebuildAction(); }, "w100"));
+    actFields(ED.action).forEach(f => aCard.append(f));
+  };
+  rebuildAction(); box.append(aCard);
+
+  const isNew = !ED.id;
+  box.append(el("div", { class: "btnrow", style: "margin-top:12px" },
+    isNew ? null : el("button", { class: "btn danger", onclick: async e => {
+      if (e.target.dataset.sure) { CFG.rules = await api().rule_delete(ED.id); closeEditor(); toast("Deleted"); }
+      else { e.target.dataset.sure = 1; e.target.textContent = "Are you sure?"; }
+    } }, "Delete"),
+    el("button", { class: "btn", onclick: async () => {
+      const r = await api().rule_test(ED);
+      toast(r.conditions_ok ? "Action ran" : "Ran (conditions aren't met right now)");
+    } }, "Test now"),
+    el("button", { class: "btn primary", style: "margin-left:auto", onclick: saveRule }, "Save")));
+}
+async function saveRule() {
+  if (!ED.name.trim()) ED.name = trigText(ED.trigger) + " → " + actText(ED.action);
+  if (["process_start", "process_stop"].includes(ED.trigger.type) && !ED.trigger.name) { toast("Enter a program name"); return; }
+  if (["time", "sun"].includes(ED.trigger.type) && !(ED.trigger.days || []).length) { toast("Pick at least one day"); return; }
+  CFG.rules = await api().rule_save(ED);
+  closeEditor(); toast("Saved");
+}
+function closeEditor() {
+  $("#ruleEditor").hidden = true; $("#ruleEditor").innerHTML = ""; $("#ruleList").hidden = false; ED = null;
+  renderRules();
+}
+
+/* ---------- settings ---------- */
+const CITIES = {
+  "Amsterdam": [52.3676, 4.9041], "Ankara": [39.9334, 32.8597], "Athens": [37.9838, 23.7275], "Berlin": [52.52, 13.405],
+  "Buenos Aires": [-34.6037, -58.3816], "Cairo": [30.0444, 31.2357], "Chicago": [41.8781, -87.6298], "Delhi": [28.6139, 77.209],
+  "Dubai": [25.2048, 55.2708], "Helsinki": [60.1699, 24.9384], "Istanbul": [41.0082, 28.9784], "Jakarta": [-6.2088, 106.8456],
+  "Johannesburg": [-26.2041, 28.0473], "London": [51.5072, -0.1276], "Los Angeles": [34.0522, -118.2437], "Madrid": [40.4168, -3.7038],
+  "Mexico City": [19.4326, -99.1332], "Moscow": [55.7558, 37.6173], "New York": [40.7128, -74.006], "Paris": [48.8566, 2.3522],
+  "Rome": [41.9028, 12.4964], "São Paulo": [-23.5505, -46.6333], "Seoul": [37.5665, 126.978], "Singapore": [1.3521, 103.8198],
+  "Stockholm": [59.3293, 18.0686], "Sydney": [-33.8688, 151.2093], "Tokyo": [35.6762, 139.6503], "Toronto": [43.6532, -79.3832],
+  "Vienna": [48.2082, 16.3738], "Warsaw": [52.2297, 21.0122],
+};
+async function saveSettings(patch, msg = "Saved") {
+  const r = await api().settings(patch);
+  CFG = r.config; INFO.hotkeyErrors = r.hotkeyErrors; INFO.autostart = r.autostart;
+  renderSettings(); applyTheme(); toast(msg);
+}
+function renderSettings() {
+  $("#devName").textContent = CFG.device.name || (CFG.device.address ? "Hue bulb" : "Glowtray");
+  $("#sDevName").textContent = CFG.device.name || "–";
+  $("#sDevAddr").textContent = CFG.device.address || "No bulb selected";
+  if (document.activeElement !== $("#sName")) $("#sName").value = CFG.device.name || "";
+  document.querySelectorAll("#connSeg button").forEach(b => b.classList.toggle("active", b.dataset.v === CFG.connection.mode));
+  $("#connHint").textContent = CFG.connection.mode === "share"
+    ? "The connection is released after each command, so the Hue app on your phone can still be used."
+    : "The PC stays connected to the bulb: instant response, but your phone can't connect meanwhile.";
+  $("#idleField").hidden = CFG.connection.mode !== "share";
+  if (document.activeElement !== $("#idleSec")) $("#idleSec").value = CFG.connection.idle_seconds;
+
+  const hk = $("#hotkeys"); hk.innerHTML = "";
+  [["toggle", "Toggle light"], ["panel", "Toggle panel"], ["bri_up", "Brightness +10"], ["bri_down", "Brightness −10"]].forEach(([k, l]) => {
+    const err = (INFO.hotkeyErrors || []).includes(k);
+    const inp = el("input", { type: "text", class: "hk", readonly: true, value: CFG.hotkeys[k] || "", placeholder: "None — click to assign" });
+    inp.onfocus = () => { inp.classList.add("capturing"); inp.value = ""; inp.placeholder = "Press keys… (Backspace clears)"; api().hotkey_capture(true); };
+    inp.onblur = () => { inp.classList.remove("capturing"); inp.value = CFG.hotkeys[k] || ""; inp.placeholder = "None — click to assign"; api().hotkey_capture(false); };
+    inp.onkeydown = e => {
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === "Escape") { inp.blur(); return; }
+      if (e.key === "Backspace" || e.key === "Delete") { saveSettings({ hotkeys: { [k]: "" } }, "Hotkey removed"); inp.blur(); return; }
+      const key = keyName(e.code);
+      if (!key) return;
+      const mods = [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", e.metaKey && "Win"].filter(Boolean);
+      if (!mods.length && !/^F\d+$/.test(key)) { inp.placeholder = "Use with Ctrl / Alt / Shift"; return; }
+      const combo = [...mods, key].join("+");
+      inp.blur();
+      saveSettings({ hotkeys: { [k]: combo } }, "Hotkey: " + combo).then(() => {
+        if ((INFO.hotkeyErrors || []).includes(k)) toast("This hotkey is already used by another program");
+      });
+    };
+    hk.append(field(l, inp, err ? "⚠ Could not register (used by another program)" : null));
+  });
+
+  const city = $("#city");
+  if (!city.options.length) {
+    Object.keys(CITIES).forEach(c => city.append(el("option", { value: c }, c)));
+    city.append(el("option", { value: "Custom" }, "Custom location"));
+  }
+  city.value = CITIES[CFG.location.city] ? CFG.location.city : "Custom";
+  if (document.activeElement !== $("#lat")) $("#lat").value = CFG.location.lat;
+  if (document.activeElement !== $("#lon")) $("#lon").value = CFG.location.lon;
+  $("#sunInfo").textContent = `☀ ${SUN.sunrise || "–"}   🌙 ${SUN.sunset || "–"}`;
+  $("#autostart").checked = !!INFO.autostart;
+  $("#theme").value = CFG.theme;
+  $("#version").textContent = "v" + (INFO.version || "");
+}
+function keyName(code) {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  if (/^F\d{1,2}$/.test(code)) return code;
+  const m = { ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", Space: "Space", PageUp: "PageUp", PageDown: "PageDown",
+    Home: "Home", End: "End", Insert: "Insert", Pause: "Pause", Equal: "+", Minus: "-", NumpadAdd: "NumPlus", NumpadSubtract: "NumMinus", Comma: ",", Period: "." };
+  return m[code] || null;
+}
+$("#sName").onchange = e => saveSettings({ device: { name: e.target.value.trim() } });
+document.querySelectorAll("#connSeg button").forEach(b => b.onclick = () => saveSettings({ connection: { mode: b.dataset.v } }));
+$("#idleSec").onchange = e => saveSettings({ connection: { idle_seconds: clamp(+e.target.value || 20, 3, 600) } });
+$("#autostart").onchange = e => saveSettings({ autostart: e.target.checked }, e.target.checked ? "Will start with Windows" : "Autostart turned off");
+$("#theme").onchange = e => saveSettings({ theme: e.target.value });
+async function updateSun() { SUN = await api().sun(CFG.location.lat, CFG.location.lon); renderSettings(); }
+$("#city").onchange = async e => {
+  const c = e.target.value; if (c === "Custom") { $("#lat").focus(); return; }
+  await saveSettings({ location: { city: c, lat: CITIES[c][0], lon: CITIES[c][1] } }); updateSun();
+};
+const saveLatLon = async () => {
+  const lat = +$("#lat").value, lon = +$("#lon").value;
+  if (isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) { toast("Invalid location"); return; }
+  await saveSettings({ location: { city: "Custom", lat, lon } }); updateSun();
+};
+$("#lat").onchange = saveLatLon; $("#lon").onchange = saveLatLon;
+$("#reconnectBtn").onclick = () => { api().reconnect(); toast("Reconnecting…"); };
+$("#logBtn").onclick = () => api().open_log();
+$("#quitBtn").onclick = e => {
+  if (e.target.dataset.sure) api().quit();
+  else { e.target.dataset.sure = 1; e.target.textContent = "Are you sure?"; setTimeout(() => { delete e.target.dataset.sure; e.target.textContent = "Quit app"; }, 3000); }
+};
+$("#scanBtn").onclick = async () => {
+  const box = $("#scanResults"), btn = $("#scanBtn");
+  btn.disabled = true; box.innerHTML = ""; box.append(el("div", { class: "small muted", style: "padding:8px 0" }, el("span", { class: "spinner" }), "  Searching for nearby Hue bulbs…"));
+  const r = await api().scan();
+  btn.disabled = false; box.innerHTML = "";
+  if (!r.ok) { box.append(el("div", { class: "small", style: "color:var(--danger);padding:6px 0" }, "Scan failed: " + r.error)); return; }
+  if (!r.devices.length) {
+    box.append(el("div", { class: "small muted", style: "padding:6px 0" },
+      "No visible bulbs found. Bulbs connected to a phone are not visible — close the Hue app on your phone and try again. For a new bulb: Hue Bluetooth app → Settings → Voice assistants → Make lights visible."));
+    return;
+  }
+  r.devices.forEach(d => {
+    const cur = d.address.toUpperCase() === (CFG.device.address || "").toUpperCase();
+    box.append(el("div", { class: "devrow" },
+      el("div", {}, el("div", {}, d.name), el("span", { class: "hint" }, `${d.address} · ${d.rssi} dBm`)),
+      cur ? el("span", { class: "muted small" }, "In use") :
+        el("div", { class: "btnrow" },
+          el("button", { class: "btn", title: "Pair with Windows (the bulb must be in visible mode)", onclick: async ev => {
+            ev.target.disabled = true; ev.target.textContent = "…"; const p = await api().pair(d.address);
+            ev.target.disabled = false; ev.target.textContent = "Pair"; toast(p.ok ? "Paired" : p.error);
+          } }, "Pair"),
+          el("button", { class: "btn primary", onclick: () => { saveSettings({ device: { address: d.address, name: d.name } }, "Bulb selected"); box.innerHTML = ""; } }, "Use"))));
+  });
+};
+
+/* ---------- calls from Python ---------- */
+window.hue = {
+  onState(st) { S = st; renderState(); },
+  onTimer(t) { TIMER = t; renderTimer(); },
+  onActivity(a) { ACTIVITY = a; renderActivity(); },
+  onFlux(f) { FLUX = f; renderFlux(); },
+  onConfig(c) { CFG = c; renderFlux(); renderFluxOpts(); },
+  onShow() { const p = $("#panel"); p.classList.remove("enter"); void p.offsetWidth; p.classList.add("enter"); requestAnimationFrame(moveInd);
+    if ($("#tab-stats").classList.contains("active")) loadStats(); },
+  onHide() { if (sceneEditing) { sceneEditing = false; $("#sceneEditBtn").textContent = "Edit"; renderScenes(); } },
+};
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !e.target.classList?.contains("hk")) {
+    if (ED) closeEditor(); else api().hide();
+  }
+});
+document.addEventListener("contextmenu", e => { if (!["INPUT"].includes(e.target.tagName)) e.preventDefault(); });
+
+async function init() {
+  const d = await api().init();
+  CFG = d.config; S = d.state; TIMER = d.timer; SUN = d.sun; ACTIVITY = d.activity || []; FLUX = d.flux || {};
+  INFO = { version: d.version, autostart: d.autostart, systemDark: d.systemDark, hotkeyErrors: d.hotkeyErrors, frozen: d.frozen };
+  $("#pinBtn").classList.toggle("on", !!d.pinned);
+  applyTheme();
+  renderState(); renderScenes(); renderTimer(); renderRules(); renderSettings(); renderFlux(); renderFluxOpts();
+  requestAnimationFrame(moveInd);
+  if (!CFG.device.address) { setTab("settings"); toast("Pick your bulb: Device → Search"); }
+}
+if (window.pywebview && window.pywebview.api && window.pywebview.api.init) init();
+else window.addEventListener("pywebviewready", init);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => { INFO.systemDark = e.matches; applyTheme(); });
+</script>
+</body>
+</html>

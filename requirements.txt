@@ -1,0 +1,6 @@
+bleak==3.0.2
+pywebview==6.2.1
+pythonnet==3.2.1
+pystray==0.19.5
+Pillow==12.3.0
+psutil==7.2.2

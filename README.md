@@ -1,0 +1,112 @@
+<p align="center"><img src="docs/icon.png" width="96" alt=""></p>
+
+<h1 align="center">Glowtray</h1>
+
+<p align="center">Control Philips Hue <b>Bluetooth</b> bulbs from the Windows system tray, with no Hue Bridge needed.</p>
+
+---
+
+Glowtray sits in your system tray as a little bulb that takes on the color of your light. Click it to open a compact
+panel for brightness, white tone, color, scenes and effects. It can also automate the light based on what your PC is
+doing: lock the screen and the light goes off, come back and it turns on, and at sunset it dims to a warm tone.
+
+## Features
+
+- **Basic controls:** on/off, brightness, color temperature (2200–6500 K), a color wheel and swatches
+- **Scenes:** built-in presets, plus saving the current light as a new scene; also available from the tray menu
+- **Effects:** candle, fireplace, breathe, color loop, party, and *match screen* (the light follows the dominant color on
+  your display)
+- **Sleep timer:** turn off, toggle, or fade out slowly after a set time
+- **Automations:** *trigger → conditions → action* rules
+  - Triggers: time of day, sunrise/sunset (with an offset), PC lock/unlock, idle/back, startup, sleep/resume,
+    shutdown, a program starting or exiting
+  - Conditions: time range, weekdays, dark outside, light on/off, a program running, PC locked, idle time
+  - Actions: on/off, scene, brightness, white tone, color, slow fade (sunrise alarm), effect, blink, Windows
+    notification, f.lux sync on/off
+- **f.lux sync:** the bulb follows the color temperature f.lux applies to your screen
+- **Global hotkeys:** toggle the light, open the panel, and raise or lower brightness
+- **Usage stats:** time on per day, hour-of-day heatmap, estimated energy use and cost
+- **Phone-friendly connection:** by default Glowtray releases the Bluetooth connection when idle, so the Hue app on your
+  phone still works (a bulb accepts only one connection at a time)
+- Dark and light themes, start with Windows, and a tray icon that shows the light's current color
+
+## Requirements
+
+- Windows 10 or 11 with Bluetooth LE
+- A Philips Hue bulb **with Bluetooth** (the ones that work with the *Hue Bluetooth* phone app)
+- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), which is preinstalled
+  on Windows 11
+
+## Installation
+
+1. Download `Glowtray.exe` from the [latest release](../../releases/latest) and put it anywhere, for example
+   `%LOCALAPPDATA%\Programs\Glowtray\`.
+2. Run it. Windows SmartScreen may warn you because the executable is not code-signed. Click
+   *More info → Run anyway*. You can also [build it yourself](#building-the-exe) from source.
+3. A bulb icon appears in the system tray. Click it to open the panel.
+
+### Connecting your bulb
+
+1. Make the bulb discoverable. In the **Hue Bluetooth** phone app, go to *Settings → Voice assistants → Make lights
+   visible*. Close the Hue app on your phone afterwards, because a bulb connected to a phone won't show up.
+2. In Glowtray, open **Settings → Device → Search**.
+3. Click **Pair** next to your bulb (or pair it in *Windows Settings → Bluetooth & devices*), then click **Use**.
+
+## Running from source
+
+```powershell
+git clone <this repository>
+cd glowtray
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python app\main.py
+```
+
+Use `python app\main.py --tray` to start hidden in the tray, which is how the autostart entry launches it.
+Python 3.11 or newer is recommended.
+
+## Building the exe
+
+```powershell
+pip install -r requirements-dev.txt
+pyinstaller glowtray.spec
+```
+
+The single-file executable is written to `dist\Glowtray.exe`.
+
+## Where data is stored
+
+Settings, usage stats and the log file are stored in `%APPDATA%\Glowtray\`. Use *Settings → Log folder* to open it.
+Glowtray does not send any data anywhere. It talks only to your bulb over Bluetooth.
+
+## How it works
+
+Hue Bluetooth bulbs expose a GATT service (`932c32bd-0000-47a2-835a-a8d455b859dd`) with characteristics for power,
+brightness, color temperature (mireds) and color (CIE xy). Glowtray uses [bleak](https://github.com/hbldh/bleak) to
+talk to them, [pywebview](https://pywebview.flowrl.com/) for the panel UI, and [pystray](https://github.com/moses-palmer/pystray)
+for the tray icon.
+
+| File | Purpose |
+|---|---|
+| `app/main.py` | App entry point, tray menu, panel window, and the API exposed to the UI |
+| `app/light.py` | Bluetooth connection, write queue, fades and effects |
+| `app/automation.py` | Rule engine and sleep timer |
+| `app/sysevents.py` | Lock, sleep and shutdown events and global hotkeys (Win32) |
+| `app/fluxsync.py` | Reads f.lux's gamma ramp and mirrors it on the bulb |
+| `app/screen.py` | Screen capture for the *match screen* effect |
+| `app/stats.py` | Usage statistics |
+| `app/ui/index.html` | The whole panel UI (HTML, CSS and JS in one file) |
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Disclaimer
+
+Glowtray is an independent project. It is not affiliated with, endorsed by, or sponsored by Signify or Philips.
+"Philips" and "Hue" are trademarks of their respective owners and are used here only to describe compatible hardware.
+
+## License
+
+[MIT](LICENSE)
