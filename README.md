@@ -137,20 +137,6 @@ pyinstaller glowtray.spec
 
 The single-file executable is written to `dist\Glowtray.exe`.
 
-## Updating the screenshots
-
-The screenshots at the top of this README are rendered from the real panel UI with sample data, so they never show
-anyone's personal settings. After changing the UI, regenerate them with:
-
-```powershell
-python tools\screenshots.py
-```
-
-This opens `app/ui/index.html` in headless Edge (or Chromium) at the panel's size and writes the four
-`docs/screenshot-*.png` files for Light, Automation, Stats and Settings. Set `GLOWTRAY_SCREENSHOT_BROWSER` to an
-Edge/Chromium executable if auto-detection does not find it. These are UI renders with fixed sample data, not
-captures of a running Windows/Bluetooth session; they stop at complete sections rather than cutting a card in half.
-
 ## Where data is stored
 
 Settings, usage stats and the log file are stored in `%APPDATA%\Glowtray\`. Use *Settings → Log folder* to open it.
