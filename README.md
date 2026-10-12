@@ -104,6 +104,18 @@ pyinstaller glowtray.spec
 
 The single-file executable is written to `dist\Glowtray.exe`.
 
+## Updating the screenshots
+
+The screenshots at the top of this README are rendered from the real panel UI with sample data, so they never show
+anyone's personal settings. After changing the UI, regenerate them with:
+
+```powershell
+python tools\screenshots.py
+```
+
+This opens `app/ui/index.html` in headless Microsoft Edge at the panel's size and writes
+`docs/screenshot-light.png` and `docs/screenshot-automation.png`.
+
 ## Where data is stored
 
 Settings, usage stats and the log file are stored in `%APPDATA%\Glowtray\`. Use *Settings → Log folder* to open it.
