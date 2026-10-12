@@ -2,7 +2,8 @@
 
 <h1 align="center">Glowtray</h1>
 
-<p align="center">Control Philips Hue <b>Bluetooth</b> bulbs from the Windows system tray, with no Hue Bridge needed.</p>
+<p align="center">An independent Windows tray app for direct <b>Bluetooth</b> control of selected Philips Hue Bluetooth lights.<br>
+No Hue Bridge needed (or supported). Not affiliated with Signify or Philips.</p>
 
 ---
 
@@ -25,17 +26,33 @@ doing: lock the screen and the light goes off, come back and it turns on, and at
     notification, f.lux sync on/off
 - **f.lux sync:** the bulb follows the color temperature f.lux applies to your screen
 - **Global hotkeys:** toggle the light, open the panel, and raise or lower brightness
-- **Usage stats:** time on per day, hour-of-day heatmap, estimated energy use and cost
+- **Usage stats:** time on per day, hour-of-day heatmap, and an energy use and cost *estimate* based on the wattage
+  you enter (not a measurement)
 - **Phone-friendly connection:** by default Glowtray releases the Bluetooth connection when idle, so the Hue app on your
   phone still works (a bulb accepts only one connection at a time)
-- Dark and light themes, start with Windows, and a tray icon that shows the light's current color
+- Dark and light themes, optional start with Windows, and a tray icon that shows the light's current color
 
 ## Requirements
 
 - Windows 10 or 11 with Bluetooth LE
-- A Philips Hue bulb **with Bluetooth** (the ones that work with the *Hue Bluetooth* phone app)
+- A Philips Hue light **with Bluetooth** that can be controlled directly over Bluetooth (see [Supported lights](#supported-lights))
 - [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), which is preinstalled
   on Windows 11
+
+## Supported lights
+
+Glowtray talks to one bulb at a time over the Hue Bluetooth GATT service. It does not use the Hue Bridge API, Zigbee,
+Matter, Thread or Wi-Fi.
+
+| Light | Status |
+|---|---|
+| Hue lights with Bluetooth, controlled directly | Intended target. Features depend on the model: *White* bulbs get on/off and brightness, *White Ambiance* adds white tone, *White and Color Ambiance* adds color. |
+| Hue lights reachable only through a Hue Bridge (Zigbee) | Not supported |
+| Bluetooth bulbs from other brands | Not supported. They use different protocols. |
+| Matter, Thread or Wi-Fi bulbs | Not supported |
+
+Glowtray has not been tested on every model or firmware version. If you try it on a bulb that isn't listed in the
+issues yet, a report (working or not) helps a lot.
 
 ## Installation
 
@@ -47,16 +64,20 @@ doing: lock the screen and the light goes off, come back and it turns on, and at
 
 ### Connecting your bulb
 
-1. Make the bulb discoverable. In the **Hue Bluetooth** phone app, go to *Settings → Voice assistants → Make lights
-   visible*. Close the Hue app on your phone afterwards, because a bulb connected to a phone won't show up.
+1. Make the bulb discoverable to other devices from the Hue app on your phone. In the *Hue Bluetooth* app this was
+   *Settings → Voice assistants → Make lights visible*; the menu may be named or placed differently in your app
+   version. Close the Hue app on your phone afterwards, because a bulb connected to a phone won't show up.
 2. In Glowtray, open **Settings → Device → Search**.
 3. Click **Pair** next to your bulb (or pair it in *Windows Settings → Bluetooth & devices*), then click **Use**.
+4. For sunrise/sunset rules, pick your city (or enter coordinates) under **Settings → Location**. Until you do, those
+   rules are paused.
+5. To launch Glowtray when you sign in, turn on **Settings → Start with Windows**. It is off by default.
 
 ## Running from source
 
 ```powershell
-git clone <this repository>
-cd glowtray
+git clone https://github.com/Tolgaugur/GlowTray.git
+cd GlowTray
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -78,7 +99,9 @@ The single-file executable is written to `dist\Glowtray.exe`.
 ## Where data is stored
 
 Settings, usage stats and the log file are stored in `%APPDATA%\Glowtray\`. Use *Settings → Log folder* to open it.
-Glowtray does not send any data anywhere. It talks only to your bulb over Bluetooth.
+Glowtray has no telemetry and makes no network connections of its own. It talks only to your bulb over Bluetooth.
+The log can contain your bulb's Bluetooth address and file paths with your user name, so check it before sharing it
+in an issue.
 
 ## How it works
 

@@ -38,5 +38,7 @@ body:
     id: log
     attributes:
       label: Log
-      description: Relevant lines from %APPDATA%\Glowtray\glowtray.log (Settings → Log folder)
+      description: >-
+        Relevant lines from %APPDATA%\Glowtray\glowtray.log (Settings → Log folder).
+        Remove your bulb's Bluetooth address and any file paths with your user name before posting.
       render: text

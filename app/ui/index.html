@@ -908,7 +908,7 @@ function trigFields(t) {
       field("Event", selectOf({ sunrise: "Sunrise", sunset: "Sunset" }, t.event, v => { t.event = v; })),
       field("Offset", el("div", {}, num(t, "offset", -240, 240, 5), " min"), "Negative: before, positive: after"),
       daysPicker(t),
-      el("div", { class: "small muted" }, `Today: sunrise ${SUN.sunrise || "?"}, sunset ${SUN.sunset || "?"}`)];
+      el("div", { class: "small muted" }, hasLocation() ? `Today: sunrise ${SUN.sunrise || "?"}, sunset ${SUN.sunset || "?"}` : NO_LOCATION)];
     case "idle": return [field("Duration", el("div", {}, num(t, "minutes", 1, 600), " min"), "No mouse/keyboard input")];
     case "active": return [field("After being idle for at least", el("div", {}, num(t, "minutes", 1, 600), " min"))];
     case "process_start": case "process_stop": return [field("Program", procIn(t, "name"))];
@@ -919,7 +919,7 @@ function condFields(c) {
   switch (c.type) {
     case "time_between": return [field("From", timeIn(c, "from")), field("To", timeIn(c, "to"))];
     case "days": return [daysPicker(c)];
-    case "dark": return [field("State", selectOf({ true: "It's dark", false: "It's light" }, c.value, v => c.value = v === "true"))];
+    case "dark": return [field("State", selectOf({ true: "It's dark", false: "It's light" }, c.value, v => c.value = v === "true"), hasLocation() ? null : NO_LOCATION)];
     case "light": return [field("State", selectOf({ on: "Light is on", off: "Light is off" }, c.value, v => c.value = v))];
     case "process": return [field("Program", procIn(c, "name")), field("State", selectOf({ true: "Is running", false: "Isn't running" }, c.running, v => c.running = v === "true"))];
     case "locked": return [field("State", selectOf({ true: "Locked", false: "Not locked" }, c.value, v => c.value = v === "true"))];
@@ -1020,7 +1020,8 @@ async function saveRule() {
   if (["process_start", "process_stop"].includes(ED.trigger.type) && !ED.trigger.name) { toast("Enter a program name"); return; }
   if (["time", "sun"].includes(ED.trigger.type) && !(ED.trigger.days || []).length) { toast("Pick at least one day"); return; }
   CFG.rules = await api().rule_save(ED);
-  closeEditor(); toast("Saved");
+  const needsSun = ED.trigger.type === "sun" || (ED.conditions || []).some(c => c.type === "dark");
+  closeEditor(); toast(needsSun && !hasLocation() ? "Saved. Set your location in Settings for it to work" : "Saved");
 }
 function closeEditor() {
   $("#ruleEditor").hidden = true; $("#ruleEditor").innerHTML = ""; $("#ruleList").hidden = false; ED = null;
@@ -1038,6 +1039,8 @@ const CITIES = {
   "Stockholm": [59.3293, 18.0686], "Sydney": [-33.8688, 151.2093], "Tokyo": [35.6762, 139.6503], "Toronto": [43.6532, -79.3832],
   "Vienna": [48.2082, 16.3738], "Warsaw": [52.2297, 21.0122],
 };
+const NO_LOCATION = "Set your location in Settings first";
+const hasLocation = () => CFG.location.lat != null && CFG.location.lon != null;
 async function saveSettings(patch, msg = "Saved") {
   const r = await api().settings(patch);
   CFG = r.config; INFO.hotkeyErrors = r.hotkeyErrors; INFO.autostart = r.autostart;
@@ -1080,13 +1083,14 @@ function renderSettings() {
 
   const city = $("#city");
   if (!city.options.length) {
+    city.append(el("option", { value: "", disabled: true }, "Choose…"));
     Object.keys(CITIES).forEach(c => city.append(el("option", { value: c }, c)));
     city.append(el("option", { value: "Custom" }, "Custom location"));
   }
-  city.value = CITIES[CFG.location.city] ? CFG.location.city : "Custom";
-  if (document.activeElement !== $("#lat")) $("#lat").value = CFG.location.lat;
-  if (document.activeElement !== $("#lon")) $("#lon").value = CFG.location.lon;
-  $("#sunInfo").textContent = `☀ ${SUN.sunrise || "–"}   🌙 ${SUN.sunset || "–"}`;
+  city.value = !hasLocation() ? "" : CITIES[CFG.location.city] ? CFG.location.city : "Custom";
+  if (document.activeElement !== $("#lat")) $("#lat").value = CFG.location.lat ?? "";
+  if (document.activeElement !== $("#lon")) $("#lon").value = CFG.location.lon ?? "";
+  $("#sunInfo").textContent = hasLocation() ? `☀ ${SUN.sunrise || "–"}   🌙 ${SUN.sunset || "–"}` : "Not set: sunrise / sunset rules are paused";
   $("#autostart").checked = !!INFO.autostart;
   $("#theme").value = CFG.theme;
   $("#version").textContent = "v" + (INFO.version || "");
@@ -1110,6 +1114,7 @@ $("#city").onchange = async e => {
   await saveSettings({ location: { city: c, lat: CITIES[c][0], lon: CITIES[c][1] } }); updateSun();
 };
 const saveLatLon = async () => {
+  if ($("#lat").value === "" || $("#lon").value === "") return;
   const lat = +$("#lat").value, lon = +$("#lon").value;
   if (isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) { toast("Invalid location"); return; }
   await saveSettings({ location: { city: "Custom", lat, lon } }); updateSun();
@@ -1129,7 +1134,7 @@ $("#scanBtn").onclick = async () => {
   if (!r.ok) { box.append(el("div", { class: "small", style: "color:var(--danger);padding:6px 0" }, "Scan failed: " + r.error)); return; }
   if (!r.devices.length) {
     box.append(el("div", { class: "small muted", style: "padding:6px 0" },
-      "No visible bulbs found. Bulbs connected to a phone are not visible — close the Hue app on your phone and try again. For a new bulb: Hue Bluetooth app → Settings → Voice assistants → Make lights visible."));
+      "No visible bulbs found. Bulbs connected to a phone are not visible — close the Hue app on your phone and try again. For a new bulb, make it visible to other devices in the Hue app on your phone (Hue Bluetooth app: Settings → Voice assistants → Make lights visible)."));
     return;
   }
   r.devices.forEach(d => {

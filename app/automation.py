@@ -3,7 +3,7 @@ import logging
 import queue
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import psutil
 
@@ -30,7 +30,7 @@ class Automation:
         self._procs = None
         self._procs_ts = 0.0
         self.timer = None       # {"end": epoch, "action": {...}, "minutes": n}
-        self._sun_cache = (None, None, None)
+        self._sun_cache = {}    # (day, lat, lon) -> (sunrise, sunset)
         self._thread = threading.Thread(target=self._loop, name="automation", daemon=True)
 
     def start(self):
@@ -51,13 +51,26 @@ class Automation:
 
     # ---------- helpers ----------
 
-    def sun_today(self):
+    def location(self):
+        """(lat, lon), or None while the user hasn't picked a location."""
         loc = self.app.cfg.get()["location"]
-        key = (datetime.now().date(), loc.get("lat"), loc.get("lon"))
-        if self._sun_cache[0] != key:
-            rise, set_ = sun.sun_times(float(loc["lat"]), float(loc["lon"]))
-            self._sun_cache = (key, rise, set_)
-        return self._sun_cache[1], self._sun_cache[2]
+        if loc.get("lat") is None or loc.get("lon") is None:
+            return None
+        return float(loc["lat"]), float(loc["lon"])
+
+    def sun_on(self, day):
+        loc = self.location()
+        if loc is None:
+            return None, None
+        key = (day, *loc)
+        if key not in self._sun_cache:
+            if len(self._sun_cache) > 16:
+                self._sun_cache.clear()
+            self._sun_cache[key] = sun.sun_times(*loc, day)
+        return self._sun_cache[key]
+
+    def sun_today(self):
+        return self.sun_on(date.today())
 
     def running_processes(self, max_age=3.0):
         if self._procs is None or time.monotonic() - self._procs_ts > max_age:
@@ -98,8 +111,10 @@ class Automation:
         if t == "days":
             return now.weekday() in c.get("days", [])
         if t == "dark":
-            loc = self.app.cfg.get()["location"]
-            return sun.is_dark(float(loc["lat"]), float(loc["lon"]), now) == bool(c.get("value", True))
+            loc = self.location()
+            if loc is None:
+                return False
+            return sun.is_dark(*loc, now) == bool(c.get("value", True))
         if t == "light":
             st = self.app.light.snapshot()
             if st.get("on") is None:
@@ -177,23 +192,37 @@ class Automation:
             if r["trigger"].get("type") == name:
                 threading.Thread(target=self.fire, args=(r, now, name), daemon=True).start()
 
+    def _sun_due(self, tr, now, days):
+        """True if the sun event plus offset falls on this minute.
+
+        A large offset can push the target past midnight, so the events of yesterday and tomorrow are checked
+        too, and the weekday filter applies to the day of the sun event itself.
+        """
+        offset = timedelta(minutes=int(tr.get("offset", 0)))
+        minute = now.replace(second=0, microsecond=0)
+        for d in (-1, 0, 1):
+            day = now.date() + timedelta(days=d)
+            if day.weekday() not in days:
+                continue
+            rise, set_ = self.sun_on(day)
+            base = rise if tr.get("event") == "sunrise" else set_
+            if base is not None and (base + offset).replace(second=0, microsecond=0) == minute:
+                return True
+        return False
+
     def _minute_triggers(self, rules, now, minute_key):
         hm = now.strftime("%H:%M")
         for r in rules:
             tr = r["trigger"]
             t = tr.get("type")
             days = tr.get("days", list(range(7)))
-            if now.weekday() not in days:
-                continue
-            target = None
             if t == "time":
-                target = tr.get("time")
+                due = now.weekday() in days and tr.get("time") == hm
             elif t == "sun":
-                rise, set_ = self.sun_today()
-                base = rise if tr.get("event") == "sunrise" else set_
-                if base is not None:
-                    target = (base + timedelta(minutes=int(tr.get("offset", 0)))).strftime("%H:%M")
-            if target and target == hm and self._fired.get(r["id"]) != minute_key:
+                due = self._sun_due(tr, now, days)
+            else:
+                continue
+            if due and self._fired.get(r["id"]) != minute_key:
                 self._fired[r["id"]] = minute_key
                 threading.Thread(target=self.fire, args=(r, now, t), daemon=True).start()
 

@@ -58,6 +58,8 @@ class Stats(threading.Thread):
             os.replace(tmp, STATS_PATH)
         except Exception:
             log.exception("could not save stats")
+            with self._lock:
+                self._dirty = True  # retry on the next save
         self._last_save = time.monotonic()
 
     def _day(self, d=None):

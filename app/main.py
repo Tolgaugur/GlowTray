@@ -311,7 +311,8 @@ class App:
             time.sleep(3)
             self.auto.emit("startup")
             if cfg.get("first_run"):
-                self.notify(f"{APP_NAME} is running in the system tray. Click the bulb icon to open the panel.")
+                self.notify(f"{APP_NAME} is running in the system tray. Click the bulb icon to open the panel. "
+                            "To start it with Windows, turn on Settings → Start with Windows.")
                 self.cfg.set("first_run", False)
             if getattr(sys, "frozen", False) and not cfg.get("tray_promoted"):
                 time.sleep(2)

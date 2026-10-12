@@ -5,6 +5,16 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- *Start with Windows* is now off by default; the first-run notification says where to turn it on.
+- No default location: sunrise/sunset triggers and the *dark outside* condition stay paused until a location is set.
+- README: clearer scope (supported lights, no Hue Bridge), a working `git clone` command, and a note about the log.
+
+### Fixed
+- Sunrise/sunset rules with an offset that crosses midnight now fire at the right time, and the weekday filter
+  applies to the day of the sun event.
+- Usage stats are saved again on the next attempt if writing the file fails.
+
 ## [1.2.0] - 2026-10-12
 
 First public, open-source release.

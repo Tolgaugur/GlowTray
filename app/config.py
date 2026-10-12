@@ -21,9 +21,9 @@ DEFAULTS = {
     "device": {"address": "", "name": ""},
     "connection": {"mode": "share", "idle_seconds": 20},
     "theme": "system",
-    "autostart": True,
+    "autostart": False,
     "hotkeys": {"toggle": "Ctrl+Alt+L", "panel": "Ctrl+Alt+H", "bri_up": "", "bri_down": ""},
-    "location": {"city": "London", "lat": 51.5072, "lon": -0.1276},
+    "location": {"city": "", "lat": None, "lon": None},  # unset until the user picks one
     "scenes": [
         {"id": "s_read", "name": "Read", "on": True, "bri": 100, "mode": "ct", "ct": 4000},
         {"id": "s_relax", "name": "Relax", "on": True, "bri": 55, "mode": "ct", "ct": 2700},
