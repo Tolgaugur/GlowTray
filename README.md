@@ -5,6 +5,12 @@
 <p align="center">An independent Windows tray app for direct <b>Bluetooth</b> control of selected Philips Hue Bluetooth lights.<br>
 No Hue Bridge needed (or supported). Not affiliated with Signify or Philips.</p>
 
+<p align="center">
+  <img src="docs/screenshot-light.png" width="300" alt="The Glowtray panel: brightness slider, color wheel, swatches and f.lux sync">
+  &nbsp;
+  <img src="docs/screenshot-automation.png" width="300" alt="The Automation tab: sunset, wake-up and PC lock rules with recent activity">
+</p>
+
 ---
 
 Glowtray sits in your system tray as a little bulb that takes on the color of your light. Click it to open a compact
