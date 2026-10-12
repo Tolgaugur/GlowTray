@@ -132,4 +132,5 @@ Glowtray is an independent project. It is not affiliated with, endorsed by, or s
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). The exe also bundles the Python runtime and several open-source packages, including pystray under the
+LGPL v3; their licenses are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

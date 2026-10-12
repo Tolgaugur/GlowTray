@@ -25,14 +25,21 @@ jobs:
       - name: Build
         run: pyinstaller glowtray.spec
 
+      - name: Collect third-party licenses
+        run: python tools/third_party_licenses.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: Glowtray
-          path: dist/Glowtray.exe
+          path: |
+            dist/Glowtray.exe
+            THIRD_PARTY_LICENSES.md
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Glowtray.exe
+          files: |
+            dist/Glowtray.exe
+            THIRD_PARTY_LICENSES.md
           generate_release_notes: true

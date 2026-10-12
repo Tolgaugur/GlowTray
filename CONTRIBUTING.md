@@ -36,6 +36,8 @@ engine or the stats can mostly be tested without one, since the app keeps workin
 - The UI lives in a single file (`app/ui/index.html`) with no build step. Please keep it that way.
 - Test your change on a real Windows machine, and mention in the PR what you tested and on which Windows version.
 - If you change behavior that users will notice, add a line to [CHANGELOG.md](CHANGELOG.md) under *Unreleased*.
+- If you add, remove or upgrade a dependency, run `python tools/third_party_licenses.py` and commit the updated
+  `THIRD_PARTY_LICENSES.md`. Only add dependencies whose licenses allow bundling them into the MIT-licensed exe.
 
 ## Ideas for first contributions
 
