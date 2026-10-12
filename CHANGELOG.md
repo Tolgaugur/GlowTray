@@ -5,31 +5,28 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
-### Changed
-- *Start with Windows* is now off by default; the first-run notification says where to turn it on.
-- No default location: sunrise/sunset triggers and the *dark outside* condition stay paused until a location is set.
-- README: clearer scope (supported lights, no Hue Bridge), a working `git clone` command, and a note about the log.
+## [1.2.0] - 2026-10-12
+
+First public, open-source release.
 
 ### Added
 - `THIRD_PARTY_LICENSES.md` with the licenses of everything bundled into the exe; releases include it next to the exe.
 - Releases include the SHA-256 hash of the exe (`Glowtray.exe.sha256` and in the release notes) with a command to
   check it.
 
-### Fixed
-- Sunrise/sunset rules with an offset that crosses midnight now fire at the right time, and the weekday filter
-  applies to the day of the sun event.
-- Usage stats are saved again on the next attempt if writing the file fails.
-
-## [1.2.0] - 2026-10-12
-
-First public, open-source release.
-
 ### Changed
 - Renamed the app from "Hue Kontrol" to **Glowtray**.
 - Translated the whole UI to English.
 - The city list for sunrise/sunset now covers major cities worldwide, and custom coordinates are still supported.
+- No default location: sunrise/sunset triggers and the *dark outside* condition stay paused until a location is set.
+- *Start with Windows* is now off by default; the first-run notification says where to turn it on.
 - Energy cost is shown without a fixed currency symbol.
 - On first start with no bulb selected, the panel opens on *Settings*.
+
+### Fixed
+- Sunrise/sunset rules with an offset that crosses midnight now fire at the right time, and the weekday filter
+  applies to the day of the sun event.
+- Usage stats are saved again on the next attempt if writing the file fails.
 
 ### Removed
 - The developer-only debug socket.
