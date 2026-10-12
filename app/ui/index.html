@@ -60,7 +60,7 @@ body:not(.off) .bulb{box-shadow:0 0 24px -4px var(--lc)}
 
 /* tabs */
 .tabs{position:relative;display:flex;margin:2px 16px 10px;padding:3px;border-radius:11px;background:var(--card);border:1px solid var(--card-b)}
-.tabs button{flex:1;position:relative;z-index:1;border:0;background:none;padding:6px 0;border-radius:8px;color:var(--muted);font-weight:600}
+.tabs button{flex:1;min-width:0;position:relative;z-index:1;border:0;background:none;padding:6px 0;border-radius:8px;color:var(--muted);font-weight:600;font-size:12px;white-space:nowrap}
 .tabs button.active{color:var(--text)}
 .tabs .ind{position:absolute;top:3px;bottom:3px;border-radius:8px;background:var(--seg);transition:left .25s cubic-bezier(.2,.8,.2,1),width .25s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 main{position:relative;flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 16px}
@@ -145,6 +145,8 @@ input.hue::-webkit-slider-runnable-track{background:linear-gradient(90deg,red,#f
 .field+.field{border-top:1px solid var(--card-b)}
 .field label{color:var(--text)}
 .field .hint{display:block;color:var(--muted);font-size:11px}
+#idleField>div:first-child{min-width:0}
+.timeout-value{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex:none}
 input[type=text],input[type=number],input[type=time],select{background:var(--input);border:1px solid var(--input-b);border-radius:8px;padding:5px 8px;outline:none;min-width:0}
 input[type=text]:focus,input[type=number]:focus,input[type=time]:focus,select:focus{border-color:var(--accent)}
 select option{background:var(--bg);color:var(--text)}
@@ -191,10 +193,10 @@ input[type=number]{width:72px}
 .subopts .lbl{font-size:12px;color:var(--muted);padding-top:6px}
 
 /* stats */
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.tile{background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:10px 10px 9px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.tile{min-width:0;background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:10px 10px 9px}
 .tile small{display:block;color:var(--muted);font-size:11px;font-weight:600}
-.tile b{display:block;font-size:17px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile b{display:block;font-size:16px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tile span{display:block;color:var(--muted);font-size:11px;white-space:nowrap}
 .bars{display:flex;align-items:flex-end;gap:4px;height:110px;padding-top:6px}
 .bars .bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
@@ -305,7 +307,7 @@ input[type=number]{width:72px}
         <div class="seg" id="connSeg" style="margin-bottom:6px"><button data-v="share">Share with phone</button><button data-v="keep">Always connected</button></div>
         <div class="small muted" id="connHint"></div>
         <div class="field" id="idleField"><div><label>Idle timeout</label><span class="hint">How long to wait before releasing the connection</span></div>
-          <div><input type="number" id="idleSec" min="3" max="600"> s</div></div>
+          <div class="timeout-value"><input type="number" id="idleSec" min="3" max="600"> s</div></div>
       </div>
 
       <div class="sect">Hotkeys</div>

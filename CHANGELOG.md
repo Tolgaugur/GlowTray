@@ -5,9 +5,19 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Documentation
+- Put download, requirements and supported lights up front; group everyday and advanced features.
+- Explain how *Match screen* samples the display, which bulbs it needs and what is (not) stored.
+- Reframe the README captures at complete UI boundaries and allow Edge/Chromium regeneration.
+- Show Light, Automation, Stats and Settings in four sample-data README screenshots.
+
+### Fixed
+- Keep all three usage-stat tiles inside the compact panel width.
+- Keep tab labels clear of their segmented borders and the idle-timeout unit beside its value at compact widths.
+
 ## [1.2.0] - 2026-10-12
 
-First public, open-source release.
+Initial release prepared for open-source distribution.
 
 ### Added
 - `THIRD_PARTY_LICENSES.md` with the licenses of everything bundled into the exe; releases include it next to the exe.

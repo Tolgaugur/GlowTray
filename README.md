@@ -6,10 +6,25 @@
 No Hue Bridge needed (or supported). Not affiliated with Signify or Philips.</p>
 
 <p align="center">
-  <img src="docs/screenshot-light.png" width="300" alt="The Glowtray panel: brightness slider, color wheel, swatches and f.lux sync">
-  &nbsp;
-  <img src="docs/screenshot-automation.png" width="300" alt="The Automation tab: sunset, wake-up and PC lock rules with recent activity">
+  <a href="#installation">Get started</a> ·
+  <a href="#requirements">Requirements</a> ·
+  <a href="#supported-lights">Supported lights</a> ·
+  <a href="#match-screen">Match screen</a>
 </p>
+
+<p align="center">
+  <img src="docs/screenshot-light.png" width="300" alt="Light tab: power, brightness, color wheel and swatches">
+  &nbsp;
+  <img src="docs/screenshot-automation.png" width="300" alt="Automation tab: sunset, wake-up, PC lock and match-screen rules">
+</p>
+<p align="center"><small>Light controls · Automation rules</small></p>
+<p align="center">
+  <img src="docs/screenshot-stats.png" width="300" alt="Stats tab: daily usage, energy estimate and hour-of-day chart">
+  &nbsp;
+  <img src="docs/screenshot-settings.png" width="300" alt="Settings tab: device selection and Bluetooth connection modes">
+</p>
+<p align="center"><small>Usage stats · Device and connection settings</small><br>
+<small>Glowtray's panel UI rendered with illustrative data; no personal settings, real bulb address or desktop are shown.</small></p>
 
 ---
 
@@ -17,13 +32,18 @@ Glowtray sits in your system tray as a little bulb that takes on the color of yo
 panel for brightness, white tone, color, scenes and effects. It can also automate the light based on what your PC is
 doing: lock the screen and the light goes off, come back and it turns on, and at sunset it dims to a warm tone.
 
-## Features
+## Everyday controls
 
-- **Basic controls:** on/off, brightness, color temperature (2200–6500 K), a color wheel and swatches
+- **Light controls:** on/off, brightness, color temperature (2200–6500 K where supported), a color wheel and swatches
 - **Scenes:** built-in presets, plus saving the current light as a new scene; also available from the tray menu
-- **Effects:** candle, fireplace, breathe, color loop, party, and *match screen* (the light follows the dominant color on
-  your display)
 - **Sleep timer:** turn off, toggle, or fade out slowly after a set time
+- Dark and light themes, optional start with Windows, and a tray icon that shows the light's current color
+
+## Advanced features
+
+- **Match screen:** on supported color bulbs, the light follows the dominant color and optionally the brightness of
+  a display you choose. [How screen matching works](#match-screen)
+- **Other effects:** candle, fireplace, breathe, color loop and party
 - **Automations:** *trigger → conditions → action* rules
   - Triggers: time of day, sunrise/sunset (with an offset), PC lock/unlock, idle/back, startup, sleep/resume,
     shutdown, a program starting or exiting
@@ -36,7 +56,20 @@ doing: lock the screen and the light goes off, come back and it turns on, and at
   you enter (not a measurement)
 - **Phone-friendly connection:** by default Glowtray releases the Bluetooth connection when idle, so the Hue app on your
   phone still works (a bulb accepts only one connection at a time)
-- Dark and light themes, optional start with Windows, and a tray icon that shows the light's current color
+
+## Match screen
+
+Select **Match screen** in the Light tab to mirror the dominant color of your chosen display on a color-capable bulb.
+While the effect is active, its options in the Light tab let you choose the display and whether screen brightness
+should affect the bulb. Glowtray samples a downscaled 64×36 image about four times per second, smooths the result, and
+sends bulb-control commands (including power, color and brightness), not screen pixels, over Bluetooth. The image is
+processed in memory; Glowtray does
+not save a screen recording, upload pixels, or send screenshots to the bulb. Stop the effect to stop sampling.
+
+This is ambient color matching, not frame-perfect video sync: transitions and Bluetooth latency will vary. The
+feature needs a Hue Bluetooth light that supports color; it is not available through a Hue Bridge.[^screen]
+
+[^screen]: Source: [`app/screen.py`](app/screen.py) and [`app/light.py`](app/light.py).
 
 ## Requirements
 
@@ -113,8 +146,10 @@ anyone's personal settings. After changing the UI, regenerate them with:
 python tools\screenshots.py
 ```
 
-This opens `app/ui/index.html` in headless Microsoft Edge at the panel's size and writes
-`docs/screenshot-light.png` and `docs/screenshot-automation.png`.
+This opens `app/ui/index.html` in headless Edge (or Chromium) at the panel's size and writes the four
+`docs/screenshot-*.png` files for Light, Automation, Stats and Settings. Set `GLOWTRAY_SCREENSHOT_BROWSER` to an
+Edge/Chromium executable if auto-detection does not find it. These are UI renders with fixed sample data, not
+captures of a running Windows/Bluetooth session; they stop at complete sections rather than cutting a card in half.
 
 ## Where data is stored
 
