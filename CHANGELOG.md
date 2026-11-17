@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+- `THIRD_PARTY_LICENSES.md` now lists setuptools (with the packages it vendors), packaging and PyInstaller's run-time
+  files, which PyInstaller puts into the exe. The list is now taken from the build output instead of
+  `requirements.txt`, so it can't miss what PyInstaller adds on its own.
+
 ## [1.2.1] - 2026-11-17
 
 ### Documentation
