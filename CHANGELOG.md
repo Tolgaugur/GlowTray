@@ -17,8 +17,17 @@ All notable changes to this project are documented here. The format is based on
 - After the bulb was switched off and on again, Glowtray stayed on *Connecting…* until it was restarted. A link that
   drops on its own is now fully released, and the next connection reads the bulb's services from the bulb instead
   of Windows' cache.
+- Renaming the bulb in *Settings* no longer drops and re-establishes the Bluetooth connection; only choosing a
+  different bulb does.
+- A `config.json` that is valid JSON but not an object no longer stops Glowtray from starting; it is backed up as
+  `config.json.corrupt` and the defaults are used, like any other corrupt config.
+- Usage stats no longer subtract time when the PC clock is set back.
 - Keep all three usage-stat tiles inside the compact panel width.
 - Keep tab labels clear of their segmented borders and the idle-timeout unit beside its value at compact widths.
+
+### Security
+- Release builds upgrade setuptools before running PyInstaller, so the exe no longer bundles the outdated setuptools
+  that ships with Python 3.11.
 
 ## [1.2.0] - 2026-10-12
 

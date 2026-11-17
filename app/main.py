@@ -597,7 +597,7 @@ class App:
         if "hotkeys" in patch:
             self.sysevents.set_hotkeys(new["hotkeys"])
             time.sleep(0.3)
-        if "device" in patch and patch["device"].get("address") != old["device"].get("address"):
+        if new["device"].get("address") != old["device"].get("address"):
             self.light.switch_device()
         if "connection" in patch and new["connection"]["mode"] == "keep":
             self.light.connect()

@@ -95,10 +95,13 @@ class Config:
         try:
             with open(CONFIG_PATH, encoding="utf-8") as f:
                 data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("config root is not an object")
         except FileNotFoundError:
             pass
         except Exception:
             # Back up the corrupt file and continue with defaults
+            data = {}
             try:
                 os.replace(CONFIG_PATH, CONFIG_PATH + ".corrupt")
             except OSError:

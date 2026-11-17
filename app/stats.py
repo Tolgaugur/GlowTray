@@ -89,7 +89,7 @@ class Stats(threading.Thread):
         now = time.time()
         dt = 0.0 if self._last is None else now - self._last
         self._last = now
-        if dt > MAX_GAP:
+        if dt < 0 or dt > MAX_GAP:  # clock set back, or a sleep/suspend gap
             dt = 0.0
         st = self.app.light.snapshot()
         on = st.get("on")

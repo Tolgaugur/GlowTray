@@ -20,7 +20,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        # Python 3.11 ships setuptools 65.5.0, which PyInstaller bundles; upgrade it so the exe doesn't carry known CVEs
+        run: |
+          python -m pip install --upgrade setuptools
+          pip install -r requirements-dev.txt
 
       - name: Build
         run: pyinstaller glowtray.spec
