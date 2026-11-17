@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-17
+
 ### Documentation
 - Put download, requirements and supported lights up front; group everyday and advanced features.
 - Explain how *Match screen* samples the display, which bulbs it needs and what is (not) stored.
@@ -12,6 +14,9 @@ All notable changes to this project are documented here. The format is based on
 - Show Light, Automation, Stats and Settings in four sample-data README screenshots.
 
 ### Fixed
+- After the bulb was switched off and on again, Glowtray stayed on *Connecting…* until it was restarted. A link that
+  drops on its own is now fully released, and the next connection reads the bulb's services from the bulb instead
+  of Windows' cache.
 - Keep all three usage-stat tiles inside the compact panel width.
 - Keep tab labels clear of their segmented borders and the idle-timeout unit beside its value at compact widths.
 

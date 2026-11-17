@@ -24,7 +24,7 @@ from stats import Stats
 from sysevents import SysEvents
 
 APP_NAME = "Glowtray"
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 PANEL_W, PANEL_H = 396, 680  # the frameless window ends up with a ~380x640 client area
 log = logging.getLogger("glowtray")
 

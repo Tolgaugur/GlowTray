@@ -15,6 +15,7 @@ import time
 
 from bleak import BleakClient, BleakScanner
 from bleak.backends.device import BLEDevice
+from bleak.exc import BleakCharacteristicNotFoundError
 
 log = logging.getLogger("glowtray.light")
 
@@ -110,6 +111,7 @@ class Light:
         self._fx_shadow = {}
         self._last_activity = time.monotonic()
         self._last_fail = 0.0
+        self._fresh_gatt = False  # skip Windows' GATT cache on the next connect (see _ensure)
         self._holds = set()
         self._state_lock = threading.Lock()
         self.state = {
@@ -190,12 +192,26 @@ class Light:
     # ---------- connection ----------
 
     def _on_disconnect(self, client):
-        # A late notification from an old/failed attempt must not drop the current connection
-        if self._client is not None and client is not self._client:
+        # Only the current connection matters: failed attempts and released connections are cleaned up where
+        # they end, and a late notification from them must not drop the current one
+        if client is not self._client:
             return
         log.info("connection lost")
         self._client = None
+        self._fresh_gatt = True
         self._set(connected=False)
+        # When the link drops on its own (e.g. the bulb lost power), bleak closes the session but keeps the GATT
+        # service objects open until disconnect() is called. While they stay open, Windows hands the same stale
+        # services to every new connection in this process and the bulb's characteristics are "not found" until
+        # the app restarts.
+        self._submit(self._dispose(client))
+
+    async def _dispose(self, client):
+        """Release everything a BleakClient holds, even if the link is already gone."""
+        try:
+            await asyncio.wait_for(client.disconnect(), 10)
+        except Exception as e:
+            log.debug("dispose: %r", e)
 
     async def _ensure(self):
         if self._client is not None and self._client.is_connected:
@@ -212,25 +228,30 @@ class Light:
             for attempt in range(3):
                 # Connect to the paired device directly without scanning (~2 s); fall back to scanning if that fails.
                 target = BLEDevice(addr, self._cfg()["device"].get("name"), None) if attempt < 2 else addr
+                # After the link dropped or the bulb's service came back incomplete, read the services from the
+                # bulb itself instead of Windows' cache, which can be stale after the bulb was power-cycled
+                fresh = self._fresh_gatt
                 client = BleakClient(target, services=[SERVICE], disconnected_callback=self._on_disconnect,
-                                     timeout=10 if attempt < 2 else 15)
+                                     timeout=10 if attempt < 2 else 15,
+                                     winrt={"use_cached_services": False} if fresh else {})
                 try:
                     await client.connect()
-                    await client.read_gatt_char(POWER)  # is the connection really up?
+                    # is the connection really up? (a read on a half-open link can otherwise wait forever)
+                    await asyncio.wait_for(client.read_gatt_char(POWER), 10)
                     self._client = client
-                    await self._after_connect()
+                    await asyncio.wait_for(self._after_connect(), 20)
                     self._last_fail = 0.0
+                    self._fresh_gatt = False
                     self._touch()
-                    log.info("connected %s", addr)
+                    log.info("connected %s%s", addr, " (services read from the bulb)" if fresh else "")
                     return True
                 except Exception as e:
                     last_err = e
                     log.warning("connection attempt %d failed: %r", attempt + 1, e)
-                    try:
-                        await client.disconnect()
-                    except Exception:
-                        pass
+                    if isinstance(e, BleakCharacteristicNotFoundError):
+                        self._fresh_gatt = True
                     self._client = None
+                    await self._dispose(client)
                     await asyncio.sleep(1)
             self._last_fail = time.monotonic()
             self._set(connected=False, busy=False, error=friendly_error(last_err))
